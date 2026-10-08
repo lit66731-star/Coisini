@@ -1,0 +1,225 @@
+/* ==========================================================================
+   Coisini · 角色人格恒定引擎
+   视觉：恒定 / 冷静 / 档案感 —— 近白面板 + 一处稳定的青色强调（= 人格锚点）。
+   ========================================================================== */
+
+#st-coisini.co {
+    --co-accent: #2a9d8f;
+    --co-accent-soft: rgba(42, 157, 143, 0.12);
+    --co-ink: #1f2933;
+    --co-muted: #6b7280;
+    --co-line: #e6e9ec;
+    --co-bg: #f7f9fa;
+    --co-card: #ffffff;
+    --co-ok: #2a9d8f;
+    --co-warn: #d97706;
+    --co-bad: #dc2626;
+
+    position: fixed;
+    inset: 0;
+    z-index: 30000;
+    display: flex;
+    flex-direction: column;
+    background: var(--co-bg);
+    color: var(--co-ink);
+    font-family: var(--main-font-family, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* ---------------- 顶栏 ---------------- */
+#st-coisini .co__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--co-line);
+    background: var(--co-card);
+    flex: 0 0 auto;
+}
+
+#st-coisini .co__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#st-coisini .co__brand-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--co-accent);
+}
+
+#st-coisini .co__brand-name {
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    font-size: 15px;
+}
+
+#st-coisini .co__brand-ver {
+    font-size: 12px;
+    color: var(--co-muted);
+    font-weight: 500;
+}
+
+#st-coisini .co__head-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+#st-coisini .co__status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--co-muted);
+}
+
+#st-coisini .co__status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--co-ok);
+    box-shadow: 0 0 0 3px var(--co-accent-soft);
+}
+
+#st-coisini .co__close {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--co-muted);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#st-coisini .co__close:hover {
+    background: var(--co-bg);
+    color: var(--co-ink);
+}
+
+#st-coisini .co__close svg { width: 18px; height: 18px; }
+
+/* ---------------- 主体 ---------------- */
+#st-coisini .co__body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#st-coisini .co__profile-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--co-card);
+    border: 1px solid var(--co-line);
+    border-radius: 10px;
+}
+
+#st-coisini .co__profile-label {
+    font-size: 12px;
+    color: var(--co-muted);
+    letter-spacing: 0.08em;
+}
+
+#st-coisini .co__profile-name {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* ---------------- 页面 ---------------- */
+#st-coisini .co__page { display: none; }
+
+#st-coisini .co__page.is-on { display: block; }
+
+#st-coisini .co__page-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+#st-coisini .co__page-code {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--co-accent);
+}
+
+#st-coisini .co__page-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+#st-coisini .co__empty {
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--co-card);
+    border: 1px dashed var(--co-line);
+    border-radius: 12px;
+}
+
+#st-coisini .co__empty-msg {
+    font-size: 14px;
+    color: var(--co-ink);
+    margin-bottom: 6px;
+}
+
+#st-coisini .co__empty-sub {
+    font-size: 12px;
+    color: var(--co-muted);
+}
+
+/* ---------------- 底部页签 ---------------- */
+#st-coisini .co__tabs {
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--co-line);
+    background: var(--co-card);
+}
+
+#st-coisini .co__tab {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border: 1px solid var(--co-line);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--co-muted);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s ease;
+}
+
+#st-coisini .co__tab svg { width: 16px; height: 16px; }
+
+#st-coisini .co__tab:hover {
+    color: var(--co-ink);
+    border-color: var(--co-accent);
+}
+
+#st-coisini .co__tab.is-on {
+    background: var(--co-accent-soft);
+    border-color: var(--co-accent);
+    color: var(--co-accent);
+    font-weight: 600;
+}
+
+/* ---------------- 顶栏入口按钮强调色 ---------------- */
+#st-coisini-button .drawer-icon {
+    color: var(--co-accent, #2a9d8f);
+}
