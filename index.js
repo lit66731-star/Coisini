@@ -27,7 +27,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.3'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.4'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -279,7 +279,12 @@ async function callApi({ prompt, systemPrompt, cfg, jsonMode }) {
     const headers = { 'Content-Type': 'application/json' };
     if (c.key) headers.Authorization = 'Bearer ' + String(c.key).trim();
     const messages = [];
-    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
+    // 附加 system 提示词（如破甲 / 越狱）拼在最前，让自定义约束先于本插件的分析指令生效
+    let sys = systemPrompt || '';
+    if (c.extraPrompt && String(c.extraPrompt).trim()) {
+        sys = String(c.extraPrompt).trim() + (sys ? '\n\n' + sys : '');
+    }
+    if (sys) messages.push({ role: 'system', content: sys });
     messages.push({ role: 'user', content: prompt });
 
     // jsonMode：请求模型强制输出 JSON（response_format）。部分兼容端点不支持该字段会 400，
@@ -498,6 +503,7 @@ function readApiInputs() {
         url: String(panel.find('.co__api-url').val() || '').trim(),
         model: String(panel.find('.co__api-model').val() || '').trim(),
         key: String(panel.find('.co__api-key').val() || '').trim(),
+        extraPrompt: String(panel.find('.co__api-extra').val() || '').trim(),
     };
 }
 function saveApiConfig() {
@@ -506,7 +512,7 @@ function saveApiConfig() {
         toastr.warning('请填写 API 地址与模型。', undefined, { timeOut: 2500 });
         return;
     }
-    getStore().api = { url: v.url, model: v.model, key: v.key };
+    getStore().api = { url: v.url, model: v.model, key: v.key, extraPrompt: v.extraPrompt };
     saveProfile();
     renderAll();
     toastr.info('插件 API 已保存。', undefined, { timeOut: 2000 });
@@ -523,7 +529,7 @@ async function testApi() {
         toastr.warning('请先填写 API 地址与模型。', undefined, { timeOut: 2500 });
         return;
     }
-    const cfg = { url: v.url, model: v.model, key: v.key };
+    const cfg = { url: v.url, model: v.model, key: v.key, extraPrompt: v.extraPrompt };
     const btn = $('.co__api-test');
     if (btn.length) btn.prop('disabled', true);
     try {
@@ -645,6 +651,10 @@ function renderApiConfig() {
         <div class="co__field">
           <span class="co__field-label">密钥（key，可选）</span>
           <input class="co__input co__api-key" type="password" placeholder="sk-…" value="${esc(cfg.key || '')}" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="co__field co__field-span">
+          <span class="co__field-label">附加 System 提示词（破甲 / 越狱 / 自定义，可选）</span>
+          <textarea class="co__input co__textarea co__api-extra" placeholder="粘贴你的破甲提示词，会拼在人格分析指令之前（与聊天预设里那段一致即可）" autocomplete="off" spellcheck="false">${esc(cfg.extraPrompt || '')}</textarea>
         </div>
       </div>
       <div class="co__api-actions">

@@ -646,6 +646,12 @@
 
 #st-coisini .co__input::placeholder { color: var(--co-ink-3); }
 
+#st-coisini .co__textarea {
+    min-height: 76px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
 #st-coisini .co__input:focus {
     border-color: var(--co-accent);
     outline: none;
