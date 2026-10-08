@@ -27,7 +27,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.2'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.3'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -345,16 +345,14 @@ function normList(arr, max) {
 }
 
 function buildCardText(c) {
+    // 只送「身份定义」字段：描述 + 性格。scenario / first_mes 是开场剧情而非人格，
+    // 成人卡里这两个字段最容易触发内容安全拦截，故默认不送（后续可按需加回）。
     const parts = [];
     if (c.name) parts.push('姓名：' + String(c.name).trim());
     const desc = String(c.description || '').trim();
     if (desc) parts.push('角色描述：\n' + desc);
     const personality = c.personality || (c.data && c.data.personality) || '';
     if (personality) parts.push('性格（personality）：\n' + String(personality).trim());
-    const scenario = c.scenario ? String(c.scenario).trim() : '';
-    if (scenario) parts.push('世界 / 开场情境（scenario）：\n' + scenario);
-    const mes = c.first_mes ? String(c.first_mes).trim() : '';
-    if (mes) parts.push('开场白（first_mes）：\n' + mes);
     return parts.join('\n\n');
 }
 
