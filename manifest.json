@@ -3,7 +3,7 @@
     "display_name": "Coisini",
     "description": "角色人格恒定引擎（Character Consistency Engine）：从角色卡建立人格核心（规则解析 + LLM 精炼价值观/行为原则/人格锚点）→ 维护人格状态 → 沉淀行为指纹 → 生成前动态人格约束 → 生成后一致性审计 → 漂移检测与纠偏。允许角色成长，但不允许角色在成长过程中逐渐变成另一个人。",
     "author": "cc_test",
-    "version": "0.3.8",
+    "version": "0.3.9",
     "loading_order": 100,
     "requires": [],
     "optional": ["serendipity"],

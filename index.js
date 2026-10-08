@@ -28,7 +28,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.8'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.9'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -217,7 +217,7 @@ function parseCharacterCard() {
     p.core.identity.name = c.name || '';
 
     // 身份摘要：取描述首段（压缩空白，截前 200 字）
-    const desc = String(c.description || '').trim();
+    const desc = String(c.description || (c.data && c.data.description) || '').trim();
     if (desc) {
         const firstPara = desc.split(/\n\s*\n/)[0];
         p.core.identity.summary = firstPara.replace(/\s+/g, ' ').slice(0, 200);
@@ -355,7 +355,7 @@ function buildCardText(c) {
     // 成人卡里这两个字段最容易触发内容安全拦截，故默认不送（后续可按需加回）。
     const parts = [];
     if (c.name) parts.push('姓名：' + String(c.name).trim());
-    const desc = String(c.description || '').trim();
+    const desc = String(c.description || (c.data && c.data.description) || '').trim();
     if (desc) parts.push('角色描述：\n' + desc);
     const personality = c.personality || (c.data && c.data.personality) || '';
     if (personality) parts.push('性格（personality）：\n' + String(personality).trim());
@@ -452,7 +452,7 @@ async function refineCore() {
         '',
         'JSON 结构（数组每项用简短中文短语）：',
         '{',
-        '  "identity": { "role": "角色在故事中的身份/职业/地位（一句话；卡里没有就写空字符串 \"\"）", "background": "角色背景（2–4 句概括；卡里没有就写空字符串 \"\"）" },',
+        '  "identity": { "role": "角色身份/职业/地位（一句话，从描述里提炼）", "background": "角色出身与过往经历（从描述里有关身世/来历/过去的内容提炼，2–4 句；描述里确实没有这类信息才写空字符串 \"\"）" },',
         '  "traits": ["性格 / 气质 / 思维方式 / 情绪特征 / 社交方式 / 表达方式，6–15 项短语"],',
         '  "values": ["重视的", "厌恶的", "追求的", "害怕的", "坚持的"],',
         '  "principles": ["遇到危险时：…", "面对冲突时：…", "面对陌生人时：…", "面对亲近的人时：…", "被背叛时：…", "被示爱时：…", "面对失败时：…"],',
@@ -460,7 +460,7 @@ async function refineCore() {
         '}',
         '',
         '要求：',
-        '1. identity.role / identity.background 若卡里没有明确信息，写空字符串 ""。',
+        '1. 尽量从描述里提炼 role 和 background，不要轻易写空；只有描述里完全没有相关信息时才写空字符串 ""。',
         '2. traits / values / principles / immutable 是短语列表，不要写成长段落。',
         '3. immutable 只放最关键、最不能变的锚点，不要与 values 重复。',
     ].join('\n');
