@@ -26,7 +26,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.1.5'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.2.0'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -143,17 +143,20 @@ function defaultProfile() {
 // ==========================================================================
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
 
-function currentChatId() {
-    const c = (this_chid !== undefined && this_chid !== null &&
+function currentCharacter() {
+    return (this_chid !== undefined && this_chid !== null &&
         Array.isArray(characters) && characters[this_chid]) ? characters[this_chid] : null;
+}
+
+function currentChatId() {
+    const c = currentCharacter();
     if (c && c.chat) return String(c.chat);
     if (chat_metadata && chat_metadata.integrity) return String(chat_metadata.integrity);
     return 'chat_' + (this_chid !== undefined && this_chid !== null ? this_chid : 'none');
 }
 
 function currentCharacterName() {
-    const c = (this_chid !== undefined && this_chid !== null &&
-        Array.isArray(characters) && characters[this_chid]) ? characters[this_chid] : null;
+    const c = currentCharacter();
     return (c && c.name) ? String(c.name) : '';
 }
 
@@ -169,13 +172,63 @@ function getProfile() {
     const id = currentChatId();
     if (!s.profiles[id]) {
         const p = defaultProfile();
-        p.core.identity.name = currentCharacterName();
+        const c = currentCharacter();
+        if (c) {
+            p.core.identity.name = c.name || '';
+            const personality = c.personality || (c.data && c.data.personality) || '';
+            p.core.traits = splitTraits(personality);
+        }
         s.profiles[id] = p;
     }
     return s.profiles[id];
 }
 
 function saveProfile() { saveSettingsDebounced(); }
+
+// ==========================================================================
+//  角色卡解析（规则版）→ 建立人格核心
+// --------------------------------------------------------------------------
+//  从角色卡提取「身份 + 性格标签」；价值观 / 行为原则 / 人格锚点需要模型
+//  理解语义，留到后续增量接 LLM 精炼。此处先把「卡 → 核心」的管线建起来。
+// ==========================================================================
+function splitTraits(str) {
+    if (!str) return [];
+    const seen = new Set();
+    const out = [];
+    for (let raw of String(str).split(/[，,、；;|/\n\r]+/)) {
+        const t = raw.replace(/^[\s：:·]+|[\s。.!！?？]+$/g, '').trim();
+        if (!t || t.length > 30 || seen.has(t)) continue;
+        seen.add(t);
+        out.push(t);
+    }
+    return out;
+}
+
+function parseCharacterCard() {
+    const c = currentCharacter();
+    if (!c) {
+        toastr.warning('请先选择一个角色。', undefined, { timeOut: 2500 });
+        return;
+    }
+    const p = getProfile();
+    p.core.identity.name = c.name || '';
+
+    // 身份摘要：取描述首段（压缩空白，截前 200 字）
+    const desc = String(c.description || '').trim();
+    if (desc) {
+        const firstPara = desc.split(/\n\s*\n/)[0];
+        p.core.identity.summary = firstPara.replace(/\s+/g, ' ').slice(0, 200);
+    }
+
+    // 性格标签：解析 personality 字段
+    const personality = c.personality || (c.data && c.data.personality) || '';
+    p.core.traits = splitTraits(personality);
+
+    saveProfile();
+    renderAll();
+    const summaryNote = p.core.identity.summary ? ' + 身份摘要' : '';
+    toastr.info(`已解析人格核心：${p.core.traits.length} 个性格标签${summaryNote}。价值观 / 行为原则 / 人格锚点待 LLM 精炼（后续增量）。`, undefined, { timeOut: 3500 });
+}
 
 // ==========================================================================
 //  渲染工具
@@ -256,7 +309,7 @@ function renderCore(p) {
 
     const toolbar = `<div class="co__toolbar">
       <button type="button" class="co__btn co__btn-primary co__parse-card">${ICONS.spark}从角色卡解析人格核心</button>
-      <span class="co__toolbar-hint">解析将提取性格 / 价值观 / 行为原则 / 人格锚点（下一增量接入）</span>
+      <span class="co__toolbar-hint">提取身份摘要 + 性格标签；价值观 / 行为原则 / 人格锚点待 LLM 精炼</span>
     </div>`;
 
     return toolbar
@@ -502,12 +555,7 @@ jQuery(() => {
     panel.find('.co__tab').on('click', function () { switchTab($(this).data('pane')); });
     panel.find('.co__close').on('click', () => togglePanel(false));
     panel.on('click', '.co__parse-card', function () {
-        // 角色卡解析 = 下一增量的入口；此处先做真实可用的最小动作：写入姓名
-        const p = getProfile();
-        p.core.identity.name = currentCharacterName();
-        saveProfile();
-        renderAll();
-        toastr.info('已写入当前角色姓名；完整人格解析（性格/价值观/行为原则/人格锚点）将在下一增量接入。', undefined, { timeOut: 3000 });
+        parseCharacterCard();
     });
 });
 
