@@ -28,7 +28,10 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.9'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.4.0'; // 面板标题旁展示，更新时与 manifest.json 同步
+
+// 人格核心页是否处于手动编辑模式（编辑时增删标签会原地重绘该页）
+let coreEditMode = false;
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -40,6 +43,7 @@ const ICONS = {
     alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17.2v.2"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>',
 };
 
 // ---------------- 页签定义（对应框架 §十九 的六个核心页面） ----------------
@@ -693,7 +697,8 @@ function renderCore(p) {
     const toolbar = `<div class="co__toolbar">
       <button type="button" class="co__btn co__parse-card">${ICONS.spark}从角色卡解析（规则）</button>
       <button type="button" class="co__btn co__btn-primary co__refine-core">${ICONS.core}LLM 精炼人格核心</button>
-      <span class="co__toolbar-hint">规则版提取身份摘要 + 性格标签；LLM 精炼补全价值观 / 行为原则 / 人格锚点</span>
+      <button type="button" class="co__btn co__edit-core">${ICONS.edit}手动编辑</button>
+      <span class="co__toolbar-hint">规则版提取身份摘要 + 性格标签；LLM 精炼补全价值观 / 行为原则 / 人格锚点；手动编辑可逐项增删、覆盖模型结果</span>
     </div>`;
 
     return toolbar
@@ -703,6 +708,79 @@ function renderCore(p) {
         + card('核心行为原则', '危险 / 冲突 / 陌生人 / 亲近 / 背叛 / 示爱 / 失败 时怎么做', chips(c.principles, '尚未解析，点「LLM 精炼人格核心」补全'))
         + card('不可漂移项 · 人格锚点', '除非出现足够强的改变事件，否则不得自然漂移', chips(c.immutable, '尚未设定人格锚点，点「LLM 精炼人格核心」补全', 'is-anchor'))
         + renderApiConfig();
+}
+
+// ---------------- 人格核心手动编辑 ----------------
+// 让用户逐项增删/覆盖模型结果：身份字段用输入框，列表字段用「可删 chip + 添加」。
+// 与 LLM 精炼 / 规则解析的关系：手动保存只写当前档案；之后再点精炼或解析仍会
+// 按原规则合并/覆盖对应字段（见 refineCore / parseCharacterCard）。
+function editableField(label, key, value, isTextarea) {
+    const v = esc(value || '');
+    const input = isTextarea
+        ? `<textarea class="co__input co__textarea" data-core-field="${key}" rows="3" placeholder="留空表示清除" autocomplete="off" spellcheck="false">${v}</textarea>`
+        : `<input class="co__input" data-core-field="${key}" type="text" value="${v}" placeholder="留空表示清除" autocomplete="off" spellcheck="false">`;
+    return `<div class="co__field">
+      <span class="co__field-label">${label}</span>
+      ${input}
+    </div>`;
+}
+
+function editableChips(key, arr, cls) {
+    const chipsHtml = (Array.isArray(arr) && arr.length)
+        ? arr.map((x, i) => `<span class="co__chip${cls ? ' ' + cls : ''}">${esc(x)}<button type="button" class="co__chip-del" data-core-field="${key}" data-idx="${i}" aria-label="删除">×</button></span>`).join('')
+        : inlineEmpty('空，可在下方输入后添加');
+    return `<div class="co__chips">${chipsHtml}</div>
+      <div class="co__chip-add-row">
+        <input class="co__input co__chip-add-input" data-core-field="${key}" type="text" placeholder="输入后回车或点「添加」" autocomplete="off" spellcheck="false">
+        <button type="button" class="co__btn co__chip-add" data-core-field="${key}">添加</button>
+      </div>`;
+}
+
+function renderCoreEdit(p) {
+    const c = p.core;
+    const ident = c.identity || {};
+    const identBody = `<div class="co__api-grid">
+      ${editableField('姓名', 'name', ident.name)}
+      ${editableField('身份 / 角色', 'role', ident.role)}
+      ${editableField('背景', 'background', ident.background, true)}
+      ${editableField('摘要', 'summary', ident.summary, true)}
+    </div>`;
+
+    const toolbar = `<div class="co__toolbar">
+      <button type="button" class="co__btn co__btn-primary co__core-save">${ICONS.core}保存修改</button>
+      <button type="button" class="co__btn co__core-cancel">取消</button>
+      <span class="co__toolbar-hint">直接填写 / 增删每个部分，保存后写入当前角色档案</span>
+    </div>`;
+
+    return toolbar
+        + card('身份', '这个人是谁', identBody)
+        + card('性格', '性格 / 气质 / 思维方式 / 情绪特征 / 社交方式 / 表达方式', editableChips('traits', c.traits))
+        + card('价值观', '重视 / 厌恶 / 追求 / 害怕 / 坚持', editableChips('values', c.values))
+        + card('核心行为原则', '危险 / 冲突 / 陌生人 / 亲近 / 背叛 / 示爱 / 失败 时怎么做', editableChips('principles', c.principles))
+        + card('不可漂移项 · 人格锚点', '除非出现足够强的改变事件，否则不得自然漂移', editableChips('immutable', c.immutable, 'is-anchor'));
+}
+
+// 只重绘「人格核心」页，尊重当前编辑模式（增删/保存时原地刷新，不跳回其他页）
+function renderCorePane() {
+    const panel = $('#st-coisini');
+    if (!panel.length) return;
+    const p = getProfile();
+    panel.find('.co__pane[data-pane="core"]').html(coreEditMode ? renderCoreEdit(p) : renderCore(p));
+}
+
+function saveCoreEdit() {
+    const panel = $('#st-coisini');
+    const p = getProfile();
+    const ident = p.core.identity || (p.core.identity = {});
+    const read = field => String(panel.find(`[data-core-field="${field}"]`).val() || '').trim();
+    ident.name = read('name');
+    ident.role = read('role');
+    ident.background = read('background');
+    ident.summary = read('summary');
+    saveProfile();
+    coreEditMode = false;
+    renderCorePane();
+    toastr.info('已保存人格核心修改。', undefined, { timeOut: 2000 });
 }
 
 function renderApiConfig() {
@@ -891,6 +969,7 @@ function renderViolations(p) {
 function renderAll() {
     const panel = $('#st-coisini');
     if (!panel.length) return;
+    coreEditMode = false; // 全量渲染回到只读模式（编辑态由 renderCorePane 单独维护）
     const p = getProfile();
     panel.find('.co__pane[data-pane="core"]').html(renderCore(p));
     panel.find('.co__pane[data-pane="state"]').html(renderState(p));
@@ -1013,6 +1092,45 @@ jQuery(() => {
     });
     panel.on('click', '.co__preset-apply', function () {
         applyPreset();
+    });
+    // 人格核心手动编辑
+    panel.on('click', '.co__edit-core', function () {
+        coreEditMode = true;
+        renderCorePane();
+    });
+    panel.on('click', '.co__core-cancel', function () {
+        coreEditMode = false;
+        renderCorePane();
+    });
+    panel.on('click', '.co__core-save', function () {
+        saveCoreEdit();
+    });
+    panel.on('click', '.co__chip-del', function () {
+        const field = $(this).data('core-field');
+        const idx = Number($(this).data('idx'));
+        const p = getProfile();
+        if (Array.isArray(p.core[field]) && Number.isInteger(idx) && idx >= 0 && idx < p.core[field].length) {
+            p.core[field].splice(idx, 1);
+            saveProfile();
+        }
+        renderCorePane();
+    });
+    panel.on('click', '.co__chip-add', function () {
+        const field = $(this).data('core-field');
+        const val = String(panel.find(`.co__chip-add-input[data-core-field="${field}"]`).val() || '').trim();
+        if (!val) return;
+        const p = getProfile();
+        if (!Array.isArray(p.core[field])) p.core[field] = [];
+        p.core[field].push(val);
+        saveProfile();
+        renderCorePane();
+    });
+    panel.on('keydown', '.co__chip-add-input', function (e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            const field = $(this).data('core-field');
+            panel.find(`.co__chip-add[data-core-field="${field}"]`).trigger('click');
+        }
     });
 });
 

@@ -318,6 +318,34 @@
     font-weight: 600;
 }
 
+/* 人格核心手动编辑：chip 删除按钮 + 添加行 */
+#st-coisini .co__chip-del {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--co-ink-3);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.75;
+}
+#st-coisini .co__chip-del:hover { background: var(--co-accent); opacity: 1; }
+#st-coisini .co__chip.is-anchor .co__chip-del { background: var(--co-accent); }
+
+#st-coisini .co__chip-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+#st-coisini .co__chip-add-input { flex: 1 1 auto; min-width: 0; }
+
 /* ============================ 内联空态 ============================ */
 #st-coisini .co__inline-empty {
     padding: 16px 14px;
