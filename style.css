@@ -611,6 +611,70 @@
     color: var(--co-accent, #3E8E87);
 }
 
+/* ============================ 插件 API 配置 ============================ */
+#st-coisini .co__api-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+#st-coisini .co__field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+#st-coisini .co__field-span { grid-column: 1 / -1; }
+
+#st-coisini .co__field-label {
+    font-size: 11.5px;
+    color: var(--co-ink-3);
+}
+
+#st-coisini .co__input {
+    width: 100%;
+    padding: 8px 11px;
+    font-size: 12.5px;
+    color: var(--co-ink);
+    background: var(--co-surface);
+    border: 1px solid var(--co-border-2);
+    border-radius: 7px;
+    min-width: 0;
+}
+
+#st-coisini .co__input::placeholder { color: var(--co-ink-3); }
+
+#st-coisini .co__input:focus {
+    border-color: var(--co-accent);
+    outline: none;
+}
+
+#st-coisini .co__api-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+#st-coisini .co__api-status {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--co-ink-3);
+}
+
+#st-coisini .co__api-status.is-ok {
+    color: var(--co-ok);
+    font-weight: 600;
+}
+
+#st-coisini .co__btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+    pointer-events: none;
+}
+
 /* ============================ 响应式 ============================ */
 @media (max-width: 720px) {
     #st-coisini .co__head { padding: 14px 16px 12px; }
@@ -623,5 +687,6 @@
     #st-coisini .co__gauge-card { flex-direction: column; gap: 18px; }
     #st-coisini .co__evo-item { grid-template-columns: 1fr; gap: 3px; }
     #st-coisini .co__evo-source { text-align: left; }
+    #st-coisini .co__api-grid { grid-template-columns: 1fr; }
     body.st-coisini-open { touch-action: auto !important; }
 }
