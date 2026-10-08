@@ -28,7 +28,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.7'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.8'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -274,7 +274,7 @@ function looksLikeRefusal(text) {
     const t = String(text || '');
     return /could not be submitted|prohibited use policy|content policy|violate|violates|safety settings|blocked|I cannot|I can't|无法提交|违反.*政策|内容安全|安全策略|被拦截|敏感词/i.test(t);
 }
-const LLM_TIMEOUT_MS = 120000; // 单次模型调用上限，防止请求挂起
+const LLM_TIMEOUT_MS = 900000; // 单次模型调用上限（15 分钟，兼容本地 Ollama 慢模型）
 async function callApi({ prompt, systemPrompt, cfg, jsonMode }) {
     const c = cfg || getApiCfg();
     const headers = { 'Content-Type': 'application/json' };
