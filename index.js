@@ -26,7 +26,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.1.4'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.1.5'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -406,12 +406,12 @@ function renderAll() {
     const panel = $('#st-coisini');
     if (!panel.length) return;
     const p = getProfile();
-    panel.find('[data-pane="core"]').html(renderCore(p));
-    panel.find('[data-pane="state"]').html(renderState(p));
-    panel.find('[data-pane="fingerprint"]').html(renderFingerprint(p));
-    panel.find('[data-pane="evolution"]').html(renderEvolution(p));
-    panel.find('[data-pane="monitor"]').html(renderMonitor(p));
-    panel.find('[data-pane="violations"]').html(renderViolations(p));
+    panel.find('.co__pane[data-pane="core"]').html(renderCore(p));
+    panel.find('.co__pane[data-pane="state"]').html(renderState(p));
+    panel.find('.co__pane[data-pane="fingerprint"]').html(renderFingerprint(p));
+    panel.find('.co__pane[data-pane="evolution"]').html(renderEvolution(p));
+    panel.find('.co__pane[data-pane="monitor"]').html(renderMonitor(p));
+    panel.find('.co__pane[data-pane="violations"]').html(renderViolations(p));
 
     // 顶栏角色名 / 页签角标
     panel.find('.co__char-name').text(currentCharacterName() || '未选择角色');
@@ -436,9 +436,7 @@ function buildPanel() {
         </button>`).join('');
 
     const panes = PAGES.map((p, i) => `
-        <section class="co__pane${i === 0 ? ' is-on' : ''}" data-pane="${p.id}">
-          <div class="co__pane-body"></div>
-        </section>`).join('');
+        <section class="co__pane${i === 0 ? ' is-on' : ''}" data-pane="${p.id}"></section>`).join('');
 
     const html = `
     <div id="st-coisini" class="co" style="display:none">

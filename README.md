@@ -92,6 +92,7 @@ CharacterProfile
 
 | 版本 | 内容 |
 | --- | --- |
+| 0.1.5 | 修复关键 bug：renderAll 选择器误中同 data-pane 的页签按钮，导致页签被整页内容覆盖、布局塌陷 |
 | 0.1.4 | 修复滚动/溢出：pane 作为滚动容器（min-height:0），文本容器 min-width:0 + 换行 |
 | 0.1.3 | 布局规整：scoped reset 隔离全局 button/标题/列表样式，卡片改显式 margin 间距 |
 | 0.1.2 | 视觉重做：隔离酒馆全局 text-shadow/glow，编辑式近白底 + 细线，空态收敛为一行说明 |
