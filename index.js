@@ -28,7 +28,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.4.0'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.4.1'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // 人格核心页是否处于手动编辑模式（编辑时增删标签会原地重绘该页）
 let coreEditMode = false;
@@ -707,6 +707,7 @@ function renderCore(p) {
         + card('价值观', '重视 / 厌恶 / 追求 / 害怕 / 坚持', chips(c.values, '尚未解析，点「LLM 精炼人格核心」补全'))
         + card('核心行为原则', '危险 / 冲突 / 陌生人 / 亲近 / 背叛 / 示爱 / 失败 时怎么做', chips(c.principles, '尚未解析，点「LLM 精炼人格核心」补全'))
         + card('不可漂移项 · 人格锚点', '除非出现足够强的改变事件，否则不得自然漂移', chips(c.immutable, '尚未设定人格锚点，点「LLM 精炼人格核心」补全', 'is-anchor'))
+        + card('生成前守卫（预览）', '下一步将注入每轮生成、守护角色不漂移；文本由上方人格核心实时生成', `<pre class="co__persona-preview">${esc(buildPersonaPrompt(p))}</pre>`)
         + renderApiConfig();
 }
 
@@ -781,6 +782,29 @@ function saveCoreEdit() {
     coreEditMode = false;
     renderCorePane();
     toastr.info('已保存人格核心修改。', undefined, { timeOut: 2000 });
+}
+
+// ==========================================================================
+//  生成前守卫（Generation Guard）· 第一步：人格约束文本生成
+// --------------------------------------------------------------------------
+//  把人格核心压成一段紧凑的中文约束，下一步注入到每轮生成前。
+//  这里先落「文本」本身 —— 措辞直接影响 RP 质量与是否触发内容拦截，
+//  先在面板里预览、确认措辞，再接 setExtensionPrompt 注入。
+// ==========================================================================
+function buildPersonaPrompt(p) {
+    const c = p.core;
+    const ident = c.identity || {};
+    const out = [];
+
+    out.push(`你正在扮演「${ident.name || '该角色'}」${ident.role ? `：${ident.role}` : ''}。`);
+    if (ident.background) out.push(`背景：${ident.background}`);
+    if (Array.isArray(c.traits) && c.traits.length) out.push(`性格：${c.traits.join('、')}。`);
+    if (Array.isArray(c.values) && c.values.length) out.push(`重视 / 追求：${c.values.join('、')}。`);
+    if (Array.isArray(c.principles) && c.principles.length) out.push(`行为原则：${c.principles.join('；')}。`);
+    if (Array.isArray(c.immutable) && c.immutable.length) out.push(`绝对不可漂移（除非出现足够强的剧情事件）：${c.immutable.join('；')}。`);
+    out.push('无论剧情如何发展，保持以上人格一致，不要因剧情推进而逐渐变成另一个人。');
+
+    return out.join('\n');
 }
 
 function renderApiConfig() {

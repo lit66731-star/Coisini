@@ -346,6 +346,20 @@
 }
 #st-coisini .co__chip-add-input { flex: 1 1 auto; min-width: 0; }
 
+/* 生成前守卫：人格约束预览块 */
+#st-coisini .co__persona-preview {
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--co-surface-2);
+    border: 1px solid var(--co-border-2);
+    border-radius: 8px;
+    color: var(--co-ink-2);
+}
+
 /* ============================ 内联空态 ============================ */
 #st-coisini .co__inline-empty {
     padding: 16px 14px;
