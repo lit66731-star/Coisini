@@ -28,7 +28,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.6'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.7'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -584,6 +584,34 @@ async function testApi() {
         if (btn.length) btn.prop('disabled', false);
     }
 }
+// 一键切到本地 Ollama（零审查）：填地址、清 key，并尝试探测已安装模型
+async function useLocalOllama() {
+    const panel = $('#st-coisini');
+    panel.find('.co__api-url').val('http://127.0.0.1:11434/v1');
+    panel.find('.co__api-key').val('');
+
+    let models = [];
+    try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 4000);
+        const res = await fetch('http://127.0.0.1:11434/api/tags', { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+            const d = await res.json();
+            models = ((d && d.models) || []).map(m => m && m.name).filter(Boolean);
+        }
+    } catch (e) {
+        models = [];
+    }
+
+    if (models.length) {
+        panel.find('.co__api-model').val(models[0]);
+        toastr.info('已切到本地 Ollama，检测到 ' + models.length + ' 个模型：' + models.join('、') + '（已选第一个，可改）。点「保存」→「测试连接」→「LLM 精炼人格核心」。', undefined, { timeOut: 8000 });
+    } else {
+        panel.find('.co__api-model').val('');
+        toastr.warning('已填 Ollama 地址（http://127.0.0.1:11434/v1，key 留空），但没检测到模型。请先安装 Ollama 并 `ollama pull qwen2.5:7b`，再把模型名填进「模型」框（如 qwen2.5:7b）。', undefined, { timeOut: 9000 });
+    }
+}
 
 // ==========================================================================
 //  渲染工具
@@ -717,6 +745,7 @@ function renderApiConfig() {
         ${presetHint}
       </div>
       <div class="co__api-actions">
+        <button type="button" class="co__btn co__ollama">本地 Ollama</button>
         <button type="button" class="co__btn co__api-save">保存</button>
         <button type="button" class="co__btn co__api-test">测试连接</button>
         <button type="button" class="co__btn co__api-clear">清空</button>
@@ -969,6 +998,9 @@ jQuery(() => {
     });
     panel.on('click', '.co__refine-core', function () {
         refineCore();
+    });
+    panel.on('click', '.co__ollama', function () {
+        useLocalOllama();
     });
     panel.on('click', '.co__api-save', function () {
         saveApiConfig();
