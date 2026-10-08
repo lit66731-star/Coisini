@@ -28,7 +28,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.5'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.6'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -497,9 +497,17 @@ async function refineCore() {
     }
 }
 
+// 兜底取 power_user：优先用导入绑定，再退 globalThis / window（不同酒馆版本暴露方式不一）
+function getPowerUser() {
+    return power_user
+        || (typeof globalThis !== 'undefined' && globalThis.power_user)
+        || (typeof window !== 'undefined' && window.power_user)
+        || null;
+}
 // 列出酒馆的提示词预设（power_user.prompts，键为预设名）
 function listPromptPresets() {
-    const prompts = (power_user && power_user.prompts) || {};
+    const pu = getPowerUser();
+    const prompts = (pu && pu.prompts) || {};
     return Object.keys(prompts).sort();
 }
 // 把所选预设的「破甲」（越狱/NSFW 提示词）套用进附加 System 提示词框
@@ -510,7 +518,7 @@ function applyPreset() {
         toastr.warning('请先选择一个预设。', undefined, { timeOut: 2500 });
         return;
     }
-    const prompts = (power_user && power_user.prompts) || {};
+    const prompts = (getPowerUser() && getPowerUser().prompts) || {};
     const p = prompts[name];
     if (!p) {
         toastr.warning('找不到预设「' + name + '」。', undefined, { timeOut: 2500 });
@@ -675,6 +683,9 @@ function renderApiConfig() {
     const statusText = configured ? '已配置' : '未配置';
     const presets = listPromptPresets();
     const presetOptions = presets.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+    const presetHint = presets.length
+        ? ''
+        : `<div class="co__preset-empty">未读取到酒馆的提示词预设（共 0 个）。常见原因：破甲写在内置「默认」预设里但没另存为有名字的自定义预设；或破甲写在「系统提示词」预设 / 角色卡里；或酒馆版本字段有差异。可先手动粘贴到上方「附加 System 提示词」框。</div>`;
     return card('插件 API · 精炼引擎', '独立 url / key / model，绝不回退到聊天 API', `
       <div class="co__api-grid">
         <div class="co__field co__field-span">
@@ -703,6 +714,7 @@ function renderApiConfig() {
           </select>
           <button type="button" class="co__btn co__preset-apply">套用</button>
         </div>
+        ${presetHint}
       </div>
       <div class="co__api-actions">
         <button type="button" class="co__btn co__api-save">保存</button>
@@ -942,6 +954,12 @@ jQuery(() => {
     getStore();
     buildButton();
     buildPanel();
+
+    // 诊断：打印能读到的酒馆预设情况，便于定位「下拉为空」的原因
+    const _pu = getPowerUser();
+    console.log('[Coisini] power_user 可用:', !!_pu,
+        '| prompts 键:', _pu && _pu.prompts ? Object.keys(_pu.prompts) : '(无)',
+        '| presets(sampler) 键:', _pu && _pu.presets ? Object.keys(_pu.presets).length : 0);
 
     const panel = $('#st-coisini');
     panel.find('.co__tab').on('click', function () { switchTab($(this).data('pane')); });
