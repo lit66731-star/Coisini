@@ -27,7 +27,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.0'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.1'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -268,28 +268,44 @@ function safeErrorText(e, key, max) {
     return t.length > m ? t.slice(0, m) + '…' : t;
 }
 const LLM_TIMEOUT_MS = 120000; // 单次模型调用上限，防止请求挂起
-async function callApi({ prompt, systemPrompt, cfg }) {
+async function callApi({ prompt, systemPrompt, cfg, jsonMode }) {
     const c = cfg || getApiCfg();
     const headers = { 'Content-Type': 'application/json' };
     if (c.key) headers.Authorization = 'Bearer ' + String(c.key).trim();
     const messages = [];
     if (systemPrompt) messages.push({ role: 'system', content: systemPrompt });
     messages.push({ role: 'user', content: prompt });
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+
+    // jsonMode：请求模型强制输出 JSON（response_format）。部分兼容端点不支持该字段会 400，
+    // 此时去掉 response_format 再试一次，保证兼容性。
+    const base = { model: String(c.model).trim(), messages, stream: false };
+    const payloads = jsonMode
+        ? [{ ...base, response_format: { type: 'json_object' } }, base]
+        : [base];
+
     let res;
-    try {
-        res = await fetch(apiEndpoint(c.url), {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ model: String(c.model).trim(), messages, stream: false }),
-            signal: ctrl.signal,
-        });
-    } catch (e) {
-        if (e && e.name === 'AbortError') throw new Error('请求超时（' + Math.round(LLM_TIMEOUT_MS / 1000) + ' 秒）');
-        throw new Error(safeErrorText(e, c.key) || '网络请求失败');
-    } finally {
+    for (let i = 0; i < payloads.length; i++) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), LLM_TIMEOUT_MS);
+        try {
+            res = await fetch(apiEndpoint(c.url), {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payloads[i]),
+                signal: ctrl.signal,
+            });
+        } catch (e) {
+            clearTimeout(timer);
+            if (e && e.name === 'AbortError') throw new Error('请求超时（' + Math.round(LLM_TIMEOUT_MS / 1000) + ' 秒）');
+            throw new Error(safeErrorText(e, c.key) || '网络请求失败');
+        }
         clearTimeout(timer);
+        // 首拍被 response_format 拒绝（HTTP 400）→ 去掉后重试一次
+        if (i === 0 && payloads.length > 1 && res.status === 400) {
+            await res.text().catch(() => {});
+            continue;
+        }
+        break;
     }
     if (!res.ok) {
         const t = await res.text().catch(() => '');
@@ -338,15 +354,63 @@ function buildCardText(c) {
 
 function parseJsonLoose(text) {
     if (!text) return null;
-    let t = String(text).trim();
-    t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '');
-    try { return JSON.parse(t); } catch (e) { /* 落到下面截取花括号重试 */ }
-    const a = t.indexOf('{');
-    const b = t.lastIndexOf('}');
-    if (a >= 0 && b > a) {
-        try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { /* 仍失败返回 null */ }
+    const t = String(text).trim();
+
+    // 1) 直接解析 / 剥掉首尾 ``` 代码块后解析（可能夹带语言标识或前后废话）
+    const candidates = [t];
+    candidates.push(t.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```\s*$/, ''));
+    const fenced = t.match(/```[a-zA-Z]*\s*([\s\S]*?)\s*```/);
+    if (fenced) candidates.push(fenced[1].trim());
+
+    for (const cand of candidates) {
+        if (!cand) continue;
+        try { return JSON.parse(cand); } catch (e) { /* 换下一种 */ }
+    }
+
+    // 2) 提取「第一个 { 到最后一个 }」的平衡区间（正确处理嵌套、字符串内的括号）
+    const sub = extractBalancedBraces(t);
+    if (sub) {
+        try { return JSON.parse(sub); } catch (e) { /* 仍失败则返回 null */ }
     }
     return null;
+}
+
+// 扫描文本，返回从第一个 '{' 开始、到与之配对的最后一个 '}' 为止的子串；无则 null
+function extractBalancedBraces(text) {
+    let start = -1, depth = 0, inStr = false, esc = false;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inStr) {
+            if (esc) esc = false;
+            else if (ch === '\\') esc = true;
+            else if (ch === '"') inStr = false;
+            continue;
+        }
+        if (ch === '"') { inStr = true; continue; }
+        if (ch === '{') {
+            if (depth === 0) start = i;
+            depth++;
+        } else if (ch === '}') {
+            depth--;
+            if (depth === 0 && start >= 0) return text.slice(start, i + 1);
+        }
+    }
+    return null;
+}
+
+// 合并两组短语（去重、去空、去首尾空白），保留已有在前、新增在后
+function mergeList(base, add) {
+    const seen = new Set();
+    const out = [];
+    const push = arr => {
+        for (const x of (arr || [])) {
+            const t = String(x == null ? '' : x).replace(/\s+/g, ' ').trim();
+            if (t && !seen.has(t)) { seen.add(t); out.push(t); }
+        }
+    };
+    push(base);
+    push(add);
+    return out;
 }
 
 async function refineCore() {
@@ -367,7 +431,7 @@ async function refineCore() {
 
     const systemPrompt = [
         '你是角色人格分析师。你从角色卡中提取稳定的「人格核心」，用于防止长篇角色扮演中角色逐渐变成另一个人。',
-        '只输出 JSON，不要任何解释、不要 Markdown 代码块、不要额外文字。',
+        '只输出一个 JSON 对象，第一个字符必须是 {，不要任何解释、不要 Markdown 代码块、不要额外文字。',
         '忠实于角色卡：卡里没写的不要凭空编造，宁缺毋滥。',
     ].join('\n');
 
@@ -376,9 +440,10 @@ async function refineCore() {
         '',
         cardText,
         '',
-        'JSON 结构（数组每项用简短中文短语，3–8 项）：',
+        'JSON 结构（数组每项用简短中文短语）：',
         '{',
         '  "identity": { "role": "角色在故事中的身份/职业/地位（一句话；卡里没有就写空字符串 \"\"）", "background": "角色背景（2–4 句概括；卡里没有就写空字符串 \"\"）" },',
+        '  "traits": ["性格 / 气质 / 思维方式 / 情绪特征 / 社交方式 / 表达方式，6–15 项短语"],',
         '  "values": ["重视的", "厌恶的", "追求的", "害怕的", "坚持的"],',
         '  "principles": ["遇到危险时：…", "面对冲突时：…", "面对陌生人时：…", "面对亲近的人时：…", "被背叛时：…", "被示爱时：…", "面对失败时：…"],',
         '  "immutable": ["绝对不可漂移的人格锚点：身份认知 / 核心欲望 / 底线 / 说话方式等，除非极强改变事件否则永远不变，3–6 项"]',
@@ -386,31 +451,33 @@ async function refineCore() {
         '',
         '要求：',
         '1. identity.role / identity.background 若卡里没有明确信息，写空字符串 ""。',
-        '2. values / principles / immutable 是短语列表，不要写成长段落。',
+        '2. traits / values / principles / immutable 是短语列表，不要写成长段落。',
         '3. immutable 只放最关键、最不能变的锚点，不要与 values 重复。',
     ].join('\n');
 
     const btn = $('.co__refine-core');
     if (btn.length) btn.prop('disabled', true);
     try {
-        const raw = await callApi({ prompt, systemPrompt });
+        const raw = await callApi({ prompt, systemPrompt, jsonMode: true });
         const obj = parseJsonLoose(raw);
         if (!obj || typeof obj !== 'object') {
-            throw new Error('模型返回无法解析为 JSON');
+            const preview = safeErrorText(raw, getApiCfg().key, 180);
+            throw new Error('模型返回无法解析为 JSON（返回片段：' + preview + '）');
         }
         const p = getProfile();
         if (obj.identity && typeof obj.identity === 'object') {
             if (typeof obj.identity.role === 'string' && obj.identity.role.trim()) p.core.identity.role = obj.identity.role.trim();
             if (typeof obj.identity.background === 'string' && obj.identity.background.trim()) p.core.identity.background = obj.identity.background.trim();
         }
+        if (obj.traits !== undefined) p.core.traits = mergeList(p.core.traits, normList(obj.traits));
         if (obj.values !== undefined) p.core.values = normList(obj.values);
         if (obj.principles !== undefined) p.core.principles = normList(obj.principles);
         if (obj.immutable !== undefined) p.core.immutable = normList(obj.immutable, 20);
         saveProfile();
         renderAll();
-        toastr.info(`已精炼人格核心：价值观 ${p.core.values.length} · 行为原则 ${p.core.principles.length} · 锚点 ${p.core.immutable.length}`, undefined, { timeOut: 3500 });
+        toastr.info(`已精炼人格核心：性格 ${p.core.traits.length} · 价值观 ${p.core.values.length} · 行为原则 ${p.core.principles.length} · 锚点 ${p.core.immutable.length}`, undefined, { timeOut: 3500 });
     } catch (e) {
-        toastr.error('精炼失败：' + safeErrorText(e, getApiCfg().key), undefined, { timeOut: 6000 });
+        toastr.error('精炼失败：' + safeErrorText(e, getApiCfg().key), undefined, { timeOut: 8000 });
     } finally {
         if (btn.length) btn.prop('disabled', false);
     }
