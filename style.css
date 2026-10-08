@@ -219,14 +219,18 @@
 #st-coisini .co__tab-badge:empty { display: none; }
 
 /* ============================ 内容区 ============================ */
-#st-coisini .co__content {
-    flex: 1 1 auto;
+/* 每个 pane 自己就是滚动容器（对齐 Serendipity 的结构：flex:1 + min-height:0 +
+   overflow-y:auto）。min-height:0 是关键——缺了它 flex 子项不会收缩，内容撑出视口、
+   上下就无法滚动。 */
+#st-coisini .co__pane {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     padding: 18px 22px 28px;
+    display: none;
 }
-
-#st-coisini .co__pane { display: none; }
 
 #st-coisini .co__pane.is-on { display: block; }
 
@@ -286,7 +290,7 @@
     padding-top: 1px;
 }
 
-#st-coisini .co__kv dd { flex: 1 1 auto; color: var(--co-ink); }
+#st-coisini .co__kv dd { flex: 1 1 auto; min-width: 0; color: var(--co-ink); overflow-wrap: anywhere; }
 
 /* ============================ 标签 chips ============================ */
 #st-coisini .co__chips {
@@ -323,6 +327,7 @@
     background: var(--co-surface-2);
     border: 1px dashed var(--co-border-2);
     border-radius: 8px;
+    overflow-wrap: anywhere;
 }
 
 /* ============================ 仪表行 ============================ */
@@ -341,6 +346,7 @@
 
 #st-coisini .co__meter-track {
     flex: 1 1 auto;
+    min-width: 0;
     height: 6px;
     border-radius: 999px;
     background: var(--co-surface-2);
@@ -395,6 +401,8 @@
 #st-coisini .co__toolbar-hint {
     font-size: 12px;
     color: var(--co-ink-3);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 #st-coisini .co__btn {
@@ -533,7 +541,7 @@
 
 #st-coisini .co__evo-item {
     display: grid;
-    grid-template-columns: 88px 84px 60px 1fr 84px;
+    grid-template-columns: 88px 84px 60px minmax(0, 1fr) 84px;
     gap: 12px;
     align-items: baseline;
     padding: 10px 14px;
@@ -548,7 +556,7 @@
 #st-coisini .co__evo-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
 #st-coisini .co__evo-delta.is-up { color: var(--co-ok); }
 #st-coisini .co__evo-delta.is-down { color: var(--co-bad); }
-#st-coisini .co__evo-reason { color: var(--co-ink); }
+#st-coisini .co__evo-reason { color: var(--co-ink); overflow-wrap: anywhere; }
 #st-coisini .co__evo-source { color: var(--co-accent-deep); font-size: 11.5px; text-align: right; }
 
 /* ============================ 异常记录 ============================ */
@@ -585,9 +593,9 @@
 #st-coisini .co__vio-badge.l3 { background: rgba(194, 80, 74, 0.12); color: #a8403a; }
 #st-coisini .co__vio-badge.l4 { background: rgba(194, 80, 74, 0.18); color: #8f2f2a; }
 
-#st-coisini .co__vio-body { flex: 1 1 auto; }
+#st-coisini .co__vio-body { flex: 1 1 auto; min-width: 0; }
 
-#st-coisini .co__vio-reason { font-size: 13px; color: var(--co-ink); }
+#st-coisini .co__vio-reason { font-size: 13px; color: var(--co-ink); overflow-wrap: anywhere; }
 
 #st-coisini .co__vio-meta {
     display: flex;
