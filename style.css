@@ -1,31 +1,63 @@
 /* ==========================================================================
    Coisini · 角色人格恒定引擎
-   视觉：冷静 / 档案感 / 编辑式 —— 近白底 + 细线 + 一处克制的青（= 人格锚点）。
+   视觉：冷静 / 档案感 / 编辑式 —— 近白底 + 细线 + 一处克制的青。
    结构：header（品牌 + 角色 + 关闭）/ tabs（顶部细线导航）/ content（档案）。
+   --------------------------------------------------------------------------
+   布局规整策略：
+   · 顶部一层 scoped reset，隔离酒馆全局的 text-shadow / glow / button 默认样式 /
+     标题与列表默认 margin，避免卡片被撑乱、按钮错位。
+   · 卡片垂直间距用显式 margin-bottom（不依赖 flex gap），更抗全局样式干扰。
    ========================================================================== */
 
-/* —— 关键：隔离酒馆全局主题的 text-shadow / glow / box-shadow —— */
+/* ============================ Scoped Reset ============================ */
 #st-coisini,
 #st-coisini * {
     text-shadow: none !important;
     -webkit-text-stroke: 0 !important;
     -webkit-tap-highlight-color: transparent !important;
+    box-shadow: none !important;
+    box-sizing: border-box;
 }
-#st-coisini * { box-shadow: none !important; }
 
+#st-coisini h1, #st-coisini h2, #st-coisini h3, #st-coisini h4,
+#st-coisini h5, #st-coisini h6, #st-coisini p, #st-coisini ul,
+#st-coisini ol, #st-coisini li, #st-coisini dl, #st-coisini dt,
+#st-coisini dd, #st-coisini figure, #st-coisini blockquote {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+#st-coisini button,
+#st-coisini input,
+#st-coisini select,
+#st-coisini textarea {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* ============================ 面板基座 ============================ */
 #st-coisini.co {
-    /* —— 设计 token —— */
-    --co-bg: #F7F7F6;            /* 主背景：近白 */
-    --co-surface: #FFFFFF;       /* 卡片 */
-    --co-surface-2: #F1F2F2;     /* 浅悬浮底 */
-    --co-ink: #26282C;           /* 主文字 */
-    --co-ink-2: #6B6F76;         /* 次级文字 */
-    --co-ink-3: #9AA0A6;         /* 辅助 / 占位 */
-    --co-border: #E8E9EB;        /* 细线 */
-    --co-border-2: #D8DADD;      /* 输入/按钮描边 */
-    --co-accent: #3E8E87;        /* 青（克制使用） */
+    --co-bg: #F7F7F6;
+    --co-surface: #FFFFFF;
+    --co-surface-2: #F1F2F2;
+    --co-ink: #26282C;
+    --co-ink-2: #6B6F76;
+    --co-ink-3: #9AA0A6;
+    --co-border: #E8E9EB;
+    --co-border-2: #D8DADD;
+    --co-accent: #3E8E87;
     --co-accent-deep: #2E6B66;
-    --co-accent-bg: #EAF2F1;     /* 青浅底 */
+    --co-accent-bg: #EAF2F1;
     --co-ok: #3E8E87;
     --co-warn: #B07D2B;
     --co-bad: #C2504A;
@@ -46,7 +78,6 @@
     max-width: none;
     max-height: none;
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -61,7 +92,7 @@
     text-rendering: optimizeLegibility;
 }
 
-/* ---------------- 顶栏 ---------------- */
+/* ============================ 顶栏 ============================ */
 #st-coisini .co__head {
     flex: 0 0 auto;
     display: flex;
@@ -74,7 +105,7 @@
 
 #st-coisini .co__brand {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
 }
 
@@ -82,15 +113,15 @@
     width: 18px;
     height: 18px;
     color: var(--co-accent);
-    align-self: center;
+    flex: 0 0 auto;
 }
 
 #st-coisini .co__brand-name {
     font-family: var(--co-serif);
     font-size: 20px;
     font-weight: 600;
-    letter-spacing: 0.01em;
     color: var(--co-ink);
+    line-height: 1;
 }
 
 #st-coisini .co__brand-ver {
@@ -122,10 +153,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    background: transparent;
-    color: var(--co-ink-3);
     border-radius: 6px;
+    color: var(--co-ink-3);
     cursor: pointer;
 }
 
@@ -136,7 +165,7 @@
 
 #st-coisini .co__close svg { width: 17px; height: 17px; }
 
-/* ---------------- 顶部导航（细线） ---------------- */
+/* ============================ 顶部导航 ============================ */
 #st-coisini .co__tabs {
     flex: 0 0 auto;
     display: flex;
@@ -148,22 +177,22 @@
 }
 
 #st-coisini .co__tab {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 7px;
     padding: 11px 14px;
-    border: none;
-    background: transparent;
     color: var(--co-ink-3);
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-#st-coisini .co__tab svg { width: 15px; height: 15px; }
+#st-coisini .co__tab svg { width: 15px; height: 15px; flex: 0 0 auto; }
 
 #st-coisini .co__tab:hover { color: var(--co-ink-2); }
 
@@ -181,6 +210,7 @@
     justify-content: center;
     font-size: 10px;
     font-weight: 700;
+    line-height: 1;
     color: #fff;
     background: var(--co-bad);
     border-radius: 999px;
@@ -188,7 +218,7 @@
 
 #st-coisini .co__tab-badge:empty { display: none; }
 
-/* ---------------- 内容区 ---------------- */
+/* ============================ 内容区 ============================ */
 #st-coisini .co__content {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -200,13 +230,16 @@
 
 #st-coisini .co__pane.is-on { display: block; }
 
-#st-coisini .co__pane-body {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+/* 卡片垂直间距：显式 margin，不依赖 flex gap */
+#st-coisini .co__card,
+#st-coisini .co__toolbar,
+#st-coisini .co__gauge-card {
+    margin-bottom: 14px;
 }
 
-/* ---------------- 卡片 ---------------- */
+#st-coisini .co__pane-body > :last-child { margin-bottom: 0; }
+
+/* ============================ 卡片 ============================ */
 #st-coisini .co__card {
     background: var(--co-surface);
     border: 1px solid var(--co-border);
@@ -236,9 +269,7 @@
 
 #st-coisini .co__card-body { padding: 14px 16px; }
 
-/* ---------------- 键值定义列表 ---------------- */
-#st-coisini .co__kv { margin: 0; }
-
+/* ============================ 键值列表 ============================ */
 #st-coisini .co__kv > div {
     display: flex;
     gap: 14px;
@@ -255,9 +286,9 @@
     padding-top: 1px;
 }
 
-#st-coisini .co__kv dd { margin: 0; flex: 1 1 auto; color: var(--co-ink); }
+#st-coisini .co__kv dd { flex: 1 1 auto; color: var(--co-ink); }
 
-/* ---------------- 标签 chips ---------------- */
+/* ============================ 标签 chips ============================ */
 #st-coisini .co__chips {
     display: flex;
     flex-wrap: wrap;
@@ -273,6 +304,7 @@
     background: var(--co-surface-2);
     border: 1px solid var(--co-border);
     color: var(--co-ink-2);
+    line-height: 1.5;
 }
 
 #st-coisini .co__chip.is-anchor {
@@ -282,7 +314,7 @@
     font-weight: 600;
 }
 
-/* ---------------- 内联空态 ---------------- */
+/* ============================ 内联空态 ============================ */
 #st-coisini .co__inline-empty {
     padding: 16px 14px;
     text-align: center;
@@ -293,7 +325,7 @@
     border-radius: 8px;
 }
 
-/* ---------------- 仪表行 ---------------- */
+/* ============================ 仪表行 ============================ */
 #st-coisini .co__meter-row {
     display: flex;
     align-items: center;
@@ -333,7 +365,7 @@
 
 #st-coisini .co__meter-val.is-null { color: var(--co-ink-3); }
 
-/* ---------------- 指纹语言行 ---------------- */
+/* ============================ 指纹语言行 ============================ */
 #st-coisini .co__fp-line {
     display: flex;
     align-items: flex-start;
@@ -348,7 +380,7 @@
     padding-top: 4px;
 }
 
-/* ---------------- 工具条 / 按钮 ---------------- */
+/* ============================ 工具条 / 按钮 ============================ */
 #st-coisini .co__toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -372,15 +404,17 @@
     padding: 7px 14px;
     font-size: 12.5px;
     font-weight: 600;
-    border-radius: 7px;
+    line-height: 1;
+    white-space: nowrap;
     border: 1px solid var(--co-border-2);
+    border-radius: 7px;
     background: var(--co-surface);
     color: var(--co-ink);
     cursor: pointer;
     transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-#st-coisini .co__btn svg { width: 14px; height: 14px; }
+#st-coisini .co__btn svg { width: 14px; height: 14px; flex: 0 0 auto; }
 
 #st-coisini .co__btn:hover { border-color: var(--co-accent); color: var(--co-accent-deep); }
 
@@ -396,7 +430,7 @@
     color: #fff;
 }
 
-/* ---------------- 监控页：大仪表 ---------------- */
+/* ============================ 监控：大仪表 ============================ */
 #st-coisini .co__gauge-card {
     display: flex;
     align-items: center;
@@ -489,11 +523,9 @@
 
 #st-coisini .co__trend:last-child { margin-bottom: 0; }
 
-/* ---------------- 成长时间线 ---------------- */
+/* ============================ 成长时间线 ============================ */
 #st-coisini .co__evo-list {
     list-style: none;
-    margin: 0;
-    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -519,11 +551,9 @@
 #st-coisini .co__evo-reason { color: var(--co-ink); }
 #st-coisini .co__evo-source { color: var(--co-accent-deep); font-size: 11.5px; text-align: right; }
 
-/* ---------------- 异常记录 ---------------- */
+/* ============================ 异常记录 ============================ */
 #st-coisini .co__vio-list {
     list-style: none;
-    margin: 0;
-    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -546,6 +576,7 @@
     font-weight: 700;
     border-radius: 6px;
     white-space: nowrap;
+    line-height: 1.5;
 }
 
 #st-coisini .co__vio-badge.l0 { background: rgba(62, 142, 135, 0.12); color: #2E6B66; }
@@ -567,12 +598,12 @@
     color: var(--co-ink-3);
 }
 
-/* ---------------- 顶栏入口按钮强调色 ---------------- */
+/* ============================ 顶栏入口按钮 ============================ */
 #st-coisini-button .drawer-icon {
     color: var(--co-accent, #3E8E87);
 }
 
-/* ---------------- 响应式 ---------------- */
+/* ============================ 响应式 ============================ */
 @media (max-width: 720px) {
     #st-coisini .co__head { padding: 14px 16px 12px; }
     #st-coisini .co__tabs { padding: 0 12px; gap: 0; }

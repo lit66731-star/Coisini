@@ -26,7 +26,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.1.2'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.1.3'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
