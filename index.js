@@ -27,7 +27,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.1'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.2'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -267,6 +267,12 @@ function safeErrorText(e, key, max) {
     const m = max || 120;
     return t.length > m ? t.slice(0, m) + '…' : t;
 }
+// 判断模型返回的是不是「内容安全策略拒绝」而非正常 JSON（如 Google/Gemini 的
+// Prohibited Use Policy 拦截，返回的是一段自然语言报错）
+function looksLikeRefusal(text) {
+    const t = String(text || '');
+    return /could not be submitted|prohibited use policy|content policy|violate|violates|safety settings|blocked|I cannot|I can't|无法提交|违反.*政策|内容安全|安全策略|被拦截|敏感词/i.test(t);
+}
 const LLM_TIMEOUT_MS = 120000; // 单次模型调用上限，防止请求挂起
 async function callApi({ prompt, systemPrompt, cfg, jsonMode }) {
     const c = cfg || getApiCfg();
@@ -461,6 +467,10 @@ async function refineCore() {
         const raw = await callApi({ prompt, systemPrompt, jsonMode: true });
         const obj = parseJsonLoose(raw);
         if (!obj || typeof obj !== 'object') {
+            if (looksLikeRefusal(raw)) {
+                toastr.error('精炼失败：模型（疑似 Google/Gemini）因内容安全策略拒绝了这张角色卡。请把「插件 API」换成与你的 RP 聊天相同、能接受该内容的提供商 / 模型——Coisini 用独立 API，绝不回退聊天 API。', undefined, { timeOut: 9000 });
+                return;
+            }
             const preview = safeErrorText(raw, getApiCfg().key, 180);
             throw new Error('模型返回无法解析为 JSON（返回片段：' + preview + '）');
         }
