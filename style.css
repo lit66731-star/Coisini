@@ -681,6 +681,25 @@
     pointer-events: none;
 }
 
+#st-coisini .co__preset-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+#st-coisini .co__preset-pick-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+#st-coisini .co__preset-pick {
+    flex: 1 1 auto;
+    min-width: 0;
+    cursor: pointer;
+}
+
 /* ============================ 响应式 ============================ */
 @media (max-width: 720px) {
     #st-coisini .co__head { padding: 14px 16px 12px; }

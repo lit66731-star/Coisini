@@ -19,6 +19,7 @@
    ========================================================================== */
 
 import { extension_settings } from '../../../extensions.js';
+import { power_user } from '../../../power-user.js';
 import {
     characters,
     this_chid,
@@ -27,7 +28,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.3.4'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.3.5'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -496,6 +497,40 @@ async function refineCore() {
     }
 }
 
+// 列出酒馆的提示词预设（power_user.prompts，键为预设名）
+function listPromptPresets() {
+    const prompts = (power_user && power_user.prompts) || {};
+    return Object.keys(prompts).sort();
+}
+// 把所选预设的「破甲」（越狱/NSFW 提示词）套用进附加 System 提示词框
+function applyPreset() {
+    const panel = $('#st-coisini');
+    const name = String(panel.find('.co__preset-pick').val() || '').trim();
+    if (!name) {
+        toastr.warning('请先选择一个预设。', undefined, { timeOut: 2500 });
+        return;
+    }
+    const prompts = (power_user && power_user.prompts) || {};
+    const p = prompts[name];
+    if (!p) {
+        toastr.warning('找不到预设「' + name + '」。', undefined, { timeOut: 2500 });
+        return;
+    }
+    let text = String(p.nsfw || p.jb || '').trim();
+    let note = '已套用预设「' + name + '」的越狱 / NSFW 提示词，请检查后点「保存」。';
+    if (!text) {
+        text = String(p.system_prompt || '').trim();
+        if (text) {
+            note = '预设「' + name + '」的越狱 / NSFW 字段为空，已改用其「系统提示词」，请检查（可能含 RP 指令，酌情删改）后点「保存」。';
+        } else {
+            toastr.warning('预设「' + name + '」里没有可套用的提示词（nsfw / jb / system_prompt 均为空）。', undefined, { timeOut: 4000 });
+            return;
+        }
+    }
+    panel.find('.co__api-extra').val(text);
+    toastr.info(note, undefined, { timeOut: 4000 });
+}
+
 // 读取 API 配置表单（供保存 / 测试用，测试不落盘，好让用户先试后存）
 function readApiInputs() {
     const panel = $('#st-coisini');
@@ -638,6 +673,8 @@ function renderApiConfig() {
     const cfg = getApiCfg();
     const configured = apiConfigured();
     const statusText = configured ? '已配置' : '未配置';
+    const presets = listPromptPresets();
+    const presetOptions = presets.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
     return card('插件 API · 精炼引擎', '独立 url / key / model，绝不回退到聊天 API', `
       <div class="co__api-grid">
         <div class="co__field co__field-span">
@@ -654,7 +691,17 @@ function renderApiConfig() {
         </div>
         <div class="co__field co__field-span">
           <span class="co__field-label">附加 System 提示词（破甲 / 越狱 / 自定义，可选）</span>
-          <textarea class="co__input co__textarea co__api-extra" placeholder="粘贴你的破甲提示词，会拼在人格分析指令之前（与聊天预设里那段一致即可）" autocomplete="off" spellcheck="false">${esc(cfg.extraPrompt || '')}</textarea>
+          <textarea class="co__input co__textarea co__api-extra" placeholder="可手动粘贴，或用下方「从酒馆预设套用」一键填入" autocomplete="off" spellcheck="false">${esc(cfg.extraPrompt || '')}</textarea>
+        </div>
+      </div>
+      <div class="co__preset-row">
+        <span class="co__field-label">从酒馆预设套用破甲（越狱 / NSFW 提示词）</span>
+        <div class="co__preset-pick-row">
+          <select class="co__input co__preset-pick">
+            <option value="">— 选择预设（共 ${presets.length} 个）—</option>
+            ${presetOptions}
+          </select>
+          <button type="button" class="co__btn co__preset-apply">套用</button>
         </div>
       </div>
       <div class="co__api-actions">
@@ -913,6 +960,9 @@ jQuery(() => {
     });
     panel.on('click', '.co__api-clear', function () {
         clearApiConfig();
+    });
+    panel.on('click', '.co__preset-apply', function () {
+        applyPreset();
     });
 });
 
