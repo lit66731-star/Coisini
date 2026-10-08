@@ -1,39 +1,65 @@
 /* ==========================================================================
    Coisini · 角色人格恒定引擎
-   视觉：恒定 / 冷静 / 档案感 —— 近白面板 + 一处稳定的青色强调（= 人格锚点）。
-   全屏：header（品牌 + 角色 + 关闭）/ tabs（顶部导航）/ content（滚动档案）/
-         footer（恒定口号）。
+   视觉：冷静 / 档案感 / 编辑式 —— 近白底 + 细线 + 一处克制的青（= 人格锚点）。
+   结构：header（品牌 + 角色 + 关闭）/ tabs（顶部细线导航）/ content（档案）。
    ========================================================================== */
 
+/* —— 关键：隔离酒馆全局主题的 text-shadow / glow / box-shadow —— */
+#st-coisini,
+#st-coisini * {
+    text-shadow: none !important;
+    -webkit-text-stroke: 0 !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+#st-coisini * { box-shadow: none !important; }
+
 #st-coisini.co {
-    --co-accent: #2a9d8f;
-    --co-accent-deep: #1f7a70;
-    --co-accent-soft: rgba(42, 157, 143, 0.12);
-    --co-accent-softer: rgba(42, 157, 143, 0.06);
-    --co-ink: #1f2933;
-    --co-muted: #6b7280;
-    --co-faint: #9aa3ad;
-    --co-line: #e6e9ec;
-    --co-bg: #f7f9fa;
-    --co-card: #ffffff;
-    --co-ok: #2a9d8f;
-    --co-warn: #d97706;
-    --co-bad: #dc2626;
-    --co-shadow: 0 1px 2px rgba(31, 41, 51, 0.05);
+    /* —— 设计 token —— */
+    --co-bg: #F7F7F6;            /* 主背景：近白 */
+    --co-surface: #FFFFFF;       /* 卡片 */
+    --co-surface-2: #F1F2F2;     /* 浅悬浮底 */
+    --co-ink: #26282C;           /* 主文字 */
+    --co-ink-2: #6B6F76;         /* 次级文字 */
+    --co-ink-3: #9AA0A6;         /* 辅助 / 占位 */
+    --co-border: #E8E9EB;        /* 细线 */
+    --co-border-2: #D8DADD;      /* 输入/按钮描边 */
+    --co-accent: #3E8E87;        /* 青（克制使用） */
+    --co-accent-deep: #2E6B66;
+    --co-accent-bg: #EAF2F1;     /* 青浅底 */
+    --co-ok: #3E8E87;
+    --co-warn: #B07D2B;
+    --co-bad: #C2504A;
+
+    --co-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter,
+        "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    --co-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+        "Songti SC", "Noto Serif SC", "Times New Roman", serif;
 
     position: fixed;
-    inset: 0;
-    z-index: 30000;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    width: 100dvw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 2147483000;
+    max-width: none;
+    max-height: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     background: var(--co-bg);
     color: var(--co-ink);
-    font-family: var(--main-font-family, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif);
-    font-size: 14px;
-    line-height: 1.55;
+    border: none;
+    border-radius: 0;
+    font-family: var(--co-sans);
+    font-size: 13px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
-
-#st-coisini.co * { box-sizing: border-box; }
 
 /* ---------------- 顶栏 ---------------- */
 #st-coisini .co__head {
@@ -41,123 +67,105 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 22px;
-    background: var(--co-card);
-    border-bottom: 1px solid var(--co-line);
+    padding: 16px 22px 14px;
+    background: var(--co-bg);
+    border-bottom: 1px solid var(--co-border);
 }
 
 #st-coisini .co__brand {
     display: flex;
-    align-items: center;
-    gap: 11px;
+    align-items: baseline;
+    gap: 10px;
 }
 
 #st-coisini .co__brand-icon {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     color: var(--co-accent);
+    align-self: center;
 }
 
 #st-coisini .co__brand-name {
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    font-size: 15px;
+    font-family: var(--co-serif);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--co-ink);
 }
 
 #st-coisini .co__brand-ver {
-    font-size: 12px;
-    color: var(--co-faint);
+    font-size: 11.5px;
+    color: var(--co-ink-3);
     font-weight: 500;
+    letter-spacing: 0.04em;
 }
 
 #st-coisini .co__head-right {
     display: flex;
     align-items: center;
-    gap: 16px;
-}
-
-#st-coisini .co__char {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border: 1px solid var(--co-line);
-    border-radius: 999px;
-    background: var(--co-bg);
-}
-
-#st-coisini .co__char-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--co-ok);
-    box-shadow: 0 0 0 3px var(--co-accent-soft);
+    gap: 14px;
 }
 
 #st-coisini .co__char-name {
-    font-weight: 600;
     font-size: 13px;
-}
-
-#st-coisini .co__char-tag {
-    font-size: 11px;
-    color: var(--co-accent-deep);
-    background: var(--co-accent-soft);
-    padding: 1px 8px;
-    border-radius: 999px;
+    color: var(--co-ink-2);
+    font-weight: 500;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 #st-coisini .co__close {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
     background: transparent;
-    color: var(--co-muted);
-    border-radius: 9px;
+    color: var(--co-ink-3);
+    border-radius: 6px;
     cursor: pointer;
 }
 
 #st-coisini .co__close:hover {
-    background: var(--co-bg);
+    background: var(--co-surface-2);
     color: var(--co-ink);
 }
 
-#st-coisini .co__close svg { width: 18px; height: 18px; }
+#st-coisini .co__close svg { width: 17px; height: 17px; }
 
-/* ---------------- 顶部导航 ---------------- */
+/* ---------------- 顶部导航（细线） ---------------- */
 #st-coisini .co__tabs {
     flex: 0 0 auto;
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    padding: 10px 22px 0;
-    background: var(--co-card);
-    border-bottom: 1px solid var(--co-line);
+    gap: 2px;
+    padding: 0 22px;
+    background: var(--co-bg);
+    border-bottom: 1px solid var(--co-border);
 }
 
 #st-coisini .co__tab {
-    position: relative;
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 10px 16px;
+    padding: 11px 14px;
     border: none;
     background: transparent;
-    color: var(--co-muted);
+    color: var(--co-ink-3);
     cursor: pointer;
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 500;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
     transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-#st-coisini .co__tab svg { width: 16px; height: 16px; }
+#st-coisini .co__tab svg { width: 15px; height: 15px; }
 
-#st-coisini .co__tab:hover { color: var(--co-ink); }
+#st-coisini .co__tab:hover { color: var(--co-ink-2); }
 
 #st-coisini .co__tab.is-on {
     color: var(--co-accent-deep);
@@ -165,13 +173,13 @@
 }
 
 #st-coisini .co__tab-badge {
-    min-width: 16px;
-    height: 16px;
+    min-width: 15px;
+    height: 15px;
     padding: 0 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 700;
     color: #fff;
     background: var(--co-bad);
@@ -185,31 +193,12 @@
     flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 20px 22px;
+    padding: 18px 22px 28px;
 }
 
 #st-coisini .co__pane { display: none; }
 
 #st-coisini .co__pane.is-on { display: block; }
-
-#st-coisini .co__pane-head {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 14px;
-}
-
-#st-coisini .co__pane-code {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    color: var(--co-accent);
-}
-
-#st-coisini .co__pane-title {
-    font-size: 17px;
-    font-weight: 650;
-}
 
 #st-coisini .co__pane-body {
     display: flex;
@@ -219,10 +208,9 @@
 
 /* ---------------- 卡片 ---------------- */
 #st-coisini .co__card {
-    background: var(--co-card);
-    border: 1px solid var(--co-line);
-    border-radius: 12px;
-    box-shadow: var(--co-shadow);
+    background: var(--co-surface);
+    border: 1px solid var(--co-border);
+    border-radius: 10px;
     overflow: hidden;
 }
 
@@ -230,20 +218,20 @@
     display: flex;
     align-items: baseline;
     gap: 10px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--co-line);
-    background: var(--co-accent-softer);
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--co-border);
+    background: var(--co-surface);
 }
 
 #st-coisini .co__card-title {
-    font-size: 14px;
-    font-weight: 650;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--co-ink);
 }
 
 #st-coisini .co__card-sub {
-    font-size: 12px;
-    color: var(--co-faint);
+    font-size: 11.5px;
+    color: var(--co-ink-3);
 }
 
 #st-coisini .co__card-body { padding: 14px 16px; }
@@ -254,42 +242,41 @@
 #st-coisini .co__kv > div {
     display: flex;
     gap: 14px;
-    padding: 8px 0;
-    border-bottom: 1px dashed var(--co-line);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--co-border);
 }
 
 #st-coisini .co__kv > div:last-child { border-bottom: none; }
 
 #st-coisini .co__kv dt {
-    flex: 0 0 96px;
+    flex: 0 0 88px;
     font-size: 12px;
-    color: var(--co-faint);
-    letter-spacing: 0.04em;
+    color: var(--co-ink-3);
     padding-top: 1px;
 }
 
-#st-coisini .co__kv dd { margin: 0; flex: 1 1 auto; }
+#st-coisini .co__kv dd { margin: 0; flex: 1 1 auto; color: var(--co-ink); }
 
 /* ---------------- 标签 chips ---------------- */
 #st-coisini .co__chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 
 #st-coisini .co__chip {
     display: inline-flex;
     align-items: center;
-    padding: 4px 12px;
-    font-size: 12.5px;
-    border-radius: 999px;
-    background: var(--co-bg);
-    border: 1px solid var(--co-line);
-    color: var(--co-ink);
+    padding: 3px 11px;
+    font-size: 12px;
+    border-radius: 6px;
+    background: var(--co-surface-2);
+    border: 1px solid var(--co-border);
+    color: var(--co-ink-2);
 }
 
 #st-coisini .co__chip.is-anchor {
-    background: var(--co-accent-soft);
+    background: var(--co-accent-bg);
     border-color: var(--co-accent);
     color: var(--co-accent-deep);
     font-weight: 600;
@@ -297,69 +284,68 @@
 
 /* ---------------- 内联空态 ---------------- */
 #st-coisini .co__inline-empty {
-    padding: 18px 14px;
+    padding: 16px 14px;
     text-align: center;
-    font-size: 12.5px;
-    color: var(--co-faint);
-    background: var(--co-bg);
-    border: 1px dashed var(--co-line);
-    border-radius: 10px;
+    font-size: 12px;
+    color: var(--co-ink-3);
+    background: var(--co-surface-2);
+    border: 1px dashed var(--co-border-2);
+    border-radius: 8px;
 }
 
-/* ---------------- 仪表行（0-10 / 百分比） ---------------- */
+/* ---------------- 仪表行 ---------------- */
 #st-coisini .co__meter-row {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 7px 0;
+    padding: 6px 0;
 }
 
 #st-coisini .co__meter-label {
-    flex: 0 0 96px;
+    flex: 0 0 88px;
     font-size: 12.5px;
-    color: var(--co-muted);
+    color: var(--co-ink-2);
 }
 
 #st-coisini .co__meter-track {
     flex: 1 1 auto;
-    height: 8px;
+    height: 6px;
     border-radius: 999px;
-    background: var(--co-bg);
-    border: 1px solid var(--co-line);
+    background: var(--co-surface-2);
     overflow: hidden;
 }
 
 #st-coisini .co__meter-fill {
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, var(--co-accent), var(--co-accent-deep));
+    background: var(--co-accent);
     transition: width 0.3s ease;
 }
 
 #st-coisini .co__meter-val {
-    flex: 0 0 40px;
+    flex: 0 0 34px;
     text-align: right;
     font-size: 12.5px;
-    font-weight: 650;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--co-ink);
 }
 
-#st-coisini .co__meter-val.is-null { color: var(--co-faint); }
+#st-coisini .co__meter-val.is-null { color: var(--co-ink-3); }
 
 /* ---------------- 指纹语言行 ---------------- */
 #st-coisini .co__fp-line {
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 6px 0;
+    padding: 5px 0;
 }
 
 #st-coisini .co__fp-line-name {
-    flex: 0 0 96px;
+    flex: 0 0 88px;
     font-size: 12.5px;
-    color: var(--co-muted);
-    padding-top: 3px;
+    color: var(--co-ink-2);
+    padding-top: 4px;
 }
 
 /* ---------------- 工具条 / 按钮 ---------------- */
@@ -368,33 +354,33 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 12px;
-    padding: 14px 16px;
-    background: var(--co-card);
-    border: 1px solid var(--co-line);
-    border-radius: 12px;
+    padding: 13px 16px;
+    background: var(--co-surface);
+    border: 1px solid var(--co-border);
+    border-radius: 10px;
 }
 
 #st-coisini .co__toolbar-hint {
     font-size: 12px;
-    color: var(--co-faint);
+    color: var(--co-ink-3);
 }
 
 #st-coisini .co__btn {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 8px 16px;
-    font-size: 13px;
+    padding: 7px 14px;
+    font-size: 12.5px;
     font-weight: 600;
-    border-radius: 9px;
-    border: 1px solid var(--co-line);
-    background: var(--co-card);
+    border-radius: 7px;
+    border: 1px solid var(--co-border-2);
+    background: var(--co-surface);
     color: var(--co-ink);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-#st-coisini .co__btn svg { width: 15px; height: 15px; }
+#st-coisini .co__btn svg { width: 14px; height: 14px; }
 
 #st-coisini .co__btn:hover { border-color: var(--co-accent); color: var(--co-accent-deep); }
 
@@ -414,22 +400,21 @@
 #st-coisini .co__gauge-card {
     display: flex;
     align-items: center;
-    gap: 28px;
-    padding: 24px;
-    background: var(--co-card);
-    border: 1px solid var(--co-line);
-    border-radius: 14px;
-    box-shadow: var(--co-shadow);
+    gap: 30px;
+    padding: 22px 24px;
+    background: var(--co-surface);
+    border: 1px solid var(--co-border);
+    border-radius: 12px;
 }
 
 #st-coisini .co__gauge-big { flex: 0 0 auto; }
 
 #st-coisini .co__gauge-ring {
     --p: 0;
-    width: 132px;
-    height: 132px;
+    width: 128px;
+    height: 128px;
     border-radius: 50%;
-    background: conic-gradient(var(--co-accent) calc(var(--p) * 1%), var(--co-bg) 0);
+    background: conic-gradient(var(--co-accent) calc(var(--p) * 1%), var(--co-surface-2) 0);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -439,9 +424,9 @@
 #st-coisini .co__gauge-ring::before {
     content: "";
     position: absolute;
-    inset: 12px;
+    inset: 11px;
     border-radius: 50%;
-    background: var(--co-card);
+    background: var(--co-surface);
 }
 
 #st-coisini .co__gauge-center {
@@ -452,41 +437,42 @@
 
 #st-coisini .co__gauge-num {
     display: block;
-    font-size: 30px;
-    font-weight: 750;
-    letter-spacing: -0.02em;
+    font-family: var(--co-serif);
+    font-size: 28px;
+    font-weight: 600;
     color: var(--co-ink);
     line-height: 1;
 }
 
 #st-coisini .co__gauge-cap {
     display: block;
-    margin-top: 6px;
-    font-size: 11.5px;
-    color: var(--co-faint);
+    margin-top: 5px;
+    font-size: 11px;
+    color: var(--co-ink-3);
+    letter-spacing: 0.04em;
 }
 
 #st-coisini .co__gauge-meta {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 #st-coisini .co__gauge-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed var(--co-line);
-    font-size: 13px;
-    color: var(--co-muted);
+    padding-bottom: 7px;
+    border-bottom: 1px solid var(--co-border);
+    font-size: 12.5px;
+    color: var(--co-ink-2);
 }
 
 #st-coisini .co__gauge-row:last-child { border-bottom: none; padding-bottom: 0; }
 
 #st-coisini .co__gauge-row b {
-    font-weight: 650;
+    font-weight: 600;
     color: var(--co-ink);
     font-variant-numeric: tabular-nums;
 }
@@ -494,20 +480,14 @@
 #st-coisini .co__trend {
     padding: 8px 12px;
     margin-bottom: 8px;
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--co-warn);
-    background: rgba(217, 119, 6, 0.08);
-    border: 1px solid rgba(217, 119, 6, 0.25);
-    border-radius: 9px;
+    background: rgba(176, 125, 43, 0.08);
+    border: 1px solid rgba(176, 125, 43, 0.25);
+    border-radius: 8px;
 }
 
 #st-coisini .co__trend:last-child { margin-bottom: 0; }
-
-#st-coisini .co__hint {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--co-faint);
-}
 
 /* ---------------- 成长时间线 ---------------- */
 #st-coisini .co__evo-list {
@@ -521,23 +501,23 @@
 
 #st-coisini .co__evo-item {
     display: grid;
-    grid-template-columns: 96px 90px 64px 1fr 84px;
+    grid-template-columns: 88px 84px 60px 1fr 84px;
     gap: 12px;
     align-items: baseline;
-    padding: 11px 14px;
-    background: var(--co-card);
-    border: 1px solid var(--co-line);
-    border-radius: 10px;
-    font-size: 13px;
+    padding: 10px 14px;
+    background: var(--co-surface);
+    border: 1px solid var(--co-border);
+    border-radius: 8px;
+    font-size: 12.5px;
 }
 
-#st-coisini .co__evo-time { color: var(--co-faint); font-size: 12px; }
-#st-coisini .co__evo-field { font-weight: 600; color: var(--co-muted); }
+#st-coisini .co__evo-time { color: var(--co-ink-3); font-size: 11.5px; }
+#st-coisini .co__evo-field { font-weight: 600; color: var(--co-ink-2); }
 #st-coisini .co__evo-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
 #st-coisini .co__evo-delta.is-up { color: var(--co-ok); }
 #st-coisini .co__evo-delta.is-down { color: var(--co-bad); }
 #st-coisini .co__evo-reason { color: var(--co-ink); }
-#st-coisini .co__evo-source { color: var(--co-accent-deep); font-size: 12px; text-align: right; }
+#st-coisini .co__evo-source { color: var(--co-accent-deep); font-size: 11.5px; text-align: right; }
 
 /* ---------------- 异常记录 ---------------- */
 #st-coisini .co__vio-list {
@@ -546,78 +526,61 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 #st-coisini .co__vio-item {
     display: flex;
     gap: 14px;
-    padding: 13px 15px;
-    background: var(--co-card);
-    border: 1px solid var(--co-line);
-    border-radius: 10px;
+    padding: 12px 14px;
+    background: var(--co-surface);
+    border: 1px solid var(--co-border);
+    border-radius: 8px;
 }
 
 #st-coisini .co__vio-badge {
     flex: 0 0 auto;
     align-self: flex-start;
-    padding: 3px 10px;
-    font-size: 11.5px;
+    padding: 2px 9px;
+    font-size: 11px;
     font-weight: 700;
-    border-radius: 7px;
+    border-radius: 6px;
     white-space: nowrap;
 }
 
-#st-coisini .co__vio-badge.l0 { background: rgba(42, 157, 143, 0.12); color: #1f7a70; }
-#st-coisini .co__vio-badge.l1 { background: #eef1f4; color: #6b7280; }
-#st-coisini .co__vio-badge.l2 { background: rgba(217, 119, 6, 0.12); color: #b45309; }
-#st-coisini .co__vio-badge.l3 { background: rgba(234, 88, 12, 0.12); color: #c2410c; }
-#st-coisini .co__vio-badge.l4 { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+#st-coisini .co__vio-badge.l0 { background: rgba(62, 142, 135, 0.12); color: #2E6B66; }
+#st-coisini .co__vio-badge.l1 { background: #EEF0F2; color: #6B6F76; }
+#st-coisini .co__vio-badge.l2 { background: rgba(176, 125, 43, 0.12); color: #976a1f; }
+#st-coisini .co__vio-badge.l3 { background: rgba(194, 80, 74, 0.12); color: #a8403a; }
+#st-coisini .co__vio-badge.l4 { background: rgba(194, 80, 74, 0.18); color: #8f2f2a; }
 
 #st-coisini .co__vio-body { flex: 1 1 auto; }
 
-#st-coisini .co__vio-reason { font-size: 13.5px; color: var(--co-ink); }
+#st-coisini .co__vio-reason { font-size: 13px; color: var(--co-ink); }
 
 #st-coisini .co__vio-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
-    margin-top: 5px;
-    font-size: 12px;
-    color: var(--co-faint);
+    gap: 12px;
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--co-ink-3);
 }
-
-/* ---------------- 页脚 ---------------- */
-#st-coisini .co__foot {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 9px 22px;
-    background: var(--co-card);
-    border-top: 1px solid var(--co-line);
-    font-size: 12px;
-    color: var(--co-faint);
-    letter-spacing: 0.06em;
-}
-
-#st-coisini .co__foot-sep { color: var(--co-line); }
 
 /* ---------------- 顶栏入口按钮强调色 ---------------- */
 #st-coisini-button .drawer-icon {
-    color: var(--co-accent, #2a9d8f);
+    color: var(--co-accent, #3E8E87);
 }
 
 /* ---------------- 响应式 ---------------- */
 @media (max-width: 720px) {
-    #st-coisini .co__head { padding: 12px 16px; }
-    #st-coisini .co__tabs { padding: 8px 12px 0; gap: 2px; }
-    #st-coisini .co__tab { padding: 9px 12px; font-size: 12.5px; }
+    #st-coisini .co__head { padding: 14px 16px 12px; }
+    #st-coisini .co__tabs { padding: 0 12px; gap: 0; }
+    #st-coisini .co__tab { padding: 10px 12px; font-size: 12.5px; }
     #st-coisini .co__tab-label { display: none; }
     #st-coisini .co__tab svg { width: 18px; height: 18px; }
-    #st-coisini .co__content { padding: 14px 14px; }
-    #st-coisini .co__char-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #st-coisini .co__content { padding: 14px 14px 22px; }
+    #st-coisini .co__char-name { max-width: 120px; }
     #st-coisini .co__gauge-card { flex-direction: column; gap: 18px; }
     #st-coisini .co__evo-item { grid-template-columns: 1fr; gap: 3px; }
     #st-coisini .co__evo-source { text-align: left; }

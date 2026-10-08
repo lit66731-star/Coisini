@@ -26,7 +26,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.1.1'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.1.2'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -267,16 +267,25 @@ function renderCore(p) {
         + card('不可漂移项 · 人格锚点', '除非出现足够强的改变事件，否则不得自然漂移', chips(c.immutable, '尚未设定人格锚点', 'is-anchor'));
 }
 
+function hasAny(obj) {
+    return Object.keys(obj || {}).some(k => obj[k] !== undefined && obj[k] !== null && obj[k] !== '');
+}
+
 function renderState(p) {
     const st = p.personalityState;
     const emotion = st.emotion || {};
     const psych = st.psychology || {};
     const mot = st.motivation || {};
 
-    const emotionBody = EMOTION_KEYS.map(k => meterRow(k, emotion[k])).join('')
-        || inlineEmpty('暂无情绪快照');
-    const psychBody = PSYCH_KEYS.map(k => meterRow(k, psych[k])).join('')
-        || inlineEmpty('暂无心理快照');
+    // 情绪/心理：有数据才渲染仪表，空态只给一行说明，避免一排空进度条显得乱
+    const emotionBody = hasAny(emotion)
+        ? EMOTION_KEYS.filter(k => emotion[k] !== undefined && emotion[k] !== null && emotion[k] !== '')
+            .map(k => meterRow(k, emotion[k])).join('')
+        : inlineEmpty('暂无情绪快照 · 开始 RP 后采样');
+    const psychBody = hasAny(psych)
+        ? PSYCH_KEYS.filter(k => psych[k] !== undefined && psych[k] !== null && psych[k] !== '')
+            .map(k => meterRow(k, psych[k])).join('')
+        : inlineEmpty('暂无心理快照 · 开始 RP 后采样');
     const motBody = `<dl class="co__kv">
       <div><dt>当前目标</dt><dd>${esc(mot.current) || inlineEmpty('暂无')}</dd></div>
       <div><dt>短期目标</dt><dd>${esc(mot.shortTerm) || inlineEmpty('暂无')}</dd></div>
@@ -356,11 +365,14 @@ function renderMonitor(p) {
         ? drift.trends.map(t => `<div class="co__trend">⚠ ${esc(t)}</div>`).join('')
         : inlineEmpty('暂无漂移趋势。开始 RP 后跨楼层对比「短期 / 中期 / 长期行为」与「人格基线」。');
 
-    const meters = percentMeter('语言一致性', null)
-        + percentMeter('行为一致性', null)
-        + percentMeter('关系一致性', null)
-        + percentMeter('价值观一致性', null)
-        + `<div class="co__hint">一致性指标在行为基线建立后开始统计（下一增量接入采样）。</div>`;
+    // 一致性指标：字段尚未在数据模型落地，骨架阶段给一行干净说明；采样接入后再渲染成仪表
+    const consistency = drift.consistency || {};
+    const meters = hasAny(consistency)
+        ? percentMeter('语言一致性', consistency.language)
+            + percentMeter('行为一致性', consistency.behavior)
+            + percentMeter('关系一致性', consistency.relationship)
+            + percentMeter('价值观一致性', consistency.value)
+        : inlineEmpty('语言 / 行为 / 关系 / 价值观一致性在行为基线建立后统计（下一增量接入采样）。');
 
     return bigGauge
         + card('一致性指标', '语言 / 行为 / 关系 / 价值观', meters)
@@ -401,10 +413,8 @@ function renderAll() {
     panel.find('[data-pane="monitor"]').html(renderMonitor(p));
     panel.find('[data-pane="violations"]').html(renderViolations(p));
 
-    // 顶栏 / 页脚 / 页签角标
+    // 顶栏角色名 / 页签角标
     panel.find('.co__char-name').text(currentCharacterName() || '未选择角色');
-    const hasProfile = Object.prototype.hasOwnProperty.call(getStore().profiles, currentChatId());
-    panel.find('.co__char-tag').text(hasProfile ? '已建档' : '未建档');
     const vcount = (p.violations || []).length;
     const vtab = panel.find('.co__tab[data-pane="violations"] .co__tab-badge');
     vtab.text(vcount ? vcount : '').toggle(vcount > 0);
@@ -427,10 +437,6 @@ function buildPanel() {
 
     const panes = PAGES.map((p, i) => `
         <section class="co__pane${i === 0 ? ' is-on' : ''}" data-pane="${p.id}">
-          <div class="co__pane-head">
-            <span class="co__pane-code">${p.code}</span>
-            <span class="co__pane-title">${p.name}</span>
-          </div>
           <div class="co__pane-body"></div>
         </section>`).join('');
 
@@ -439,15 +445,11 @@ function buildPanel() {
       <header class="co__head">
         <div class="co__brand">
           <span class="co__brand-icon">${ICONS.core}</span>
-          <span class="co__brand-name">COISINI</span>
+          <span class="co__brand-name">Coisini</span>
           <span class="co__brand-ver">v${VERSION}</span>
         </div>
         <div class="co__head-right">
-          <div class="co__char">
-            <span class="co__char-dot"></span>
-            <span class="co__char-name">—</span>
-            <span class="co__char-tag">—</span>
-          </div>
+          <span class="co__char-name">—</span>
           <button type="button" class="co__close" title="关闭">${ICONS.close}</button>
         </div>
       </header>
@@ -455,12 +457,6 @@ function buildPanel() {
       <nav class="co__tabs">${tabs}</nav>
 
       <main class="co__content">${panes}</main>
-
-      <footer class="co__foot">
-        <span class="co__foot-item">角色人格恒定引擎</span>
-        <span class="co__foot-sep">·</span>
-        <span class="co__foot-item">允许成长，不允许变成另一个人</span>
-      </footer>
     </div>`;
     $('body').append(html);
 }
