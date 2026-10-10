@@ -33,7 +33,7 @@ import {
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.5.1'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.5.2'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // 人格核心页是否处于手动编辑模式（编辑时增删标签会原地重绘该页）
 let coreEditMode = false;
