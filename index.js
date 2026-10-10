@@ -23,15 +23,22 @@ import { power_user } from '../../../power-user.js';
 import {
     characters,
     this_chid,
+    chat,
     chat_metadata,
+    event_types,
+    eventSource,
+    setExtensionPrompt,
+    extension_prompt_types,
     saveSettingsDebounced,
 } from '../../../../script.js';
 
 const extensionName = 'coisini';
-const VERSION = '0.4.1'; // 面板标题旁展示，更新时与 manifest.json 同步
+const VERSION = '0.5.0'; // 面板标题旁展示，更新时与 manifest.json 同步
 
 // 人格核心页是否处于手动编辑模式（编辑时增删标签会原地重绘该页）
 let coreEditMode = false;
+// 审计进行中标记：防止自动审计在慢模型上重叠堆积
+let auditing = false;
 
 // ---------------- 图标（线性极简：人格核心 = 核 + 恒定轨道） ----------------
 const ICONS = {
@@ -44,6 +51,7 @@ const ICONS = {
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>',
     edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>',
+    people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2a3 3 0 0 1 0 5.6"/><path d="M17.6 14.2a6.5 6.5 0 0 1 3.9 5.8"/></svg>',
 };
 
 // ---------------- 页签定义（对应框架 §十九 的六个核心页面） ----------------
@@ -51,6 +59,7 @@ const PAGES = [
     { id: 'core',        icon: ICONS.core,   name: '人格核心',   code: 'CORE' },
     { id: 'state',       icon: ICONS.pulse,  name: '当前状态',   code: 'STATE' },
     { id: 'fingerprint', icon: ICONS.finger, name: '行为指纹',   code: 'FINGERPRINT' },
+    { id: 'relationships', icon: ICONS.people, name: '关系系统', code: 'RELATIONSHIPS' },
     { id: 'evolution',   icon: ICONS.grow,   name: '人格成长',   code: 'EVOLUTION' },
     { id: 'monitor',     icon: ICONS.gauge,  name: '一致性监控', code: 'MONITOR' },
     { id: 'violations',  icon: ICONS.alert,  name: '异常记录',   code: 'VIOLATIONS' },
@@ -128,8 +137,7 @@ function defaultProfile() {
             baseline: null,           // 长期行为基线（由滚动统计沉淀）
         },
 
-        relationships: {},  // key = 对方标识 → { type, trust, intimacy, dependence, guard,
-                            //   respect, hostility, possessiveness, emotion, history:[], keyEvents:[] }
+        relationships: [],  // [{ name, type, note }] 角色对不同人的关系：对方名字 / 关系类型 / 相处方式说明
 
         evolution: {
             changes: [],    // { t, field, delta, reason, source }  source = 第 N 楼（剧情依据）
@@ -171,8 +179,13 @@ function getStore() {
     const s = extension_settings[extensionName];
     s.profiles = s.profiles || {};
     s.api = s.api || {};
+    s.settings = s.settings || {};
+    if (s.settings.guardEnabled === undefined) s.settings.guardEnabled = true;   // 生成前守卫：每轮注入人格锚定
+    if (s.settings.autoAudit === undefined) s.settings.autoAudit = false;        // 生成后审计：每轮自动（慢模型慎开）
     return s;
 }
+
+function getSettings() { return getStore().settings; }
 
 function getProfile() {
     const s = getStore();
@@ -707,7 +720,12 @@ function renderCore(p) {
         + card('价值观', '重视 / 厌恶 / 追求 / 害怕 / 坚持', chips(c.values, '尚未解析，点「LLM 精炼人格核心」补全'))
         + card('核心行为原则', '危险 / 冲突 / 陌生人 / 亲近 / 背叛 / 示爱 / 失败 时怎么做', chips(c.principles, '尚未解析，点「LLM 精炼人格核心」补全'))
         + card('不可漂移项 · 人格锚点', '除非出现足够强的改变事件，否则不得自然漂移', chips(c.immutable, '尚未设定人格锚点，点「LLM 精炼人格核心」补全', 'is-anchor'))
-        + card('生成前守卫（预览）', '下一步将注入每轮生成、守护角色不漂移；文本由上方人格核心实时生成', `<pre class="co__persona-preview">${esc(buildPersonaPrompt(p))}</pre>`)
+        + card('生成前守卫', '每轮生成前把人格锚定注入提示词、守护角色不漂移', `
+          <label class="co__toggle-row">
+            <input type="checkbox" class="co__guard-toggle" ${getSettings().guardEnabled ? 'checked' : ''}>
+            <span>启用每轮注入</span>
+          </label>
+          <pre class="co__persona-preview">${esc(buildPersonaPrompt(p))}</pre>`)
         + renderApiConfig();
 }
 
@@ -767,6 +785,7 @@ function renderCorePane() {
     if (!panel.length) return;
     const p = getProfile();
     panel.find('.co__pane[data-pane="core"]').html(coreEditMode ? renderCoreEdit(p) : renderCore(p));
+    updateGuardInjection();
 }
 
 function saveCoreEdit() {
@@ -785,11 +804,11 @@ function saveCoreEdit() {
 }
 
 // ==========================================================================
-//  生成前守卫（Generation Guard）· 第一步：人格约束文本生成
+//  生成前守卫（Generation Guard）—— 人格约束文本生成 + 每轮注入
 // --------------------------------------------------------------------------
-//  把人格核心压成一段紧凑的中文约束，下一步注入到每轮生成前。
-//  这里先落「文本」本身 —— 措辞直接影响 RP 质量与是否触发内容拦截，
-//  先在面板里预览、确认措辞，再接 setExtensionPrompt 注入。
+//  buildPersonaPrompt 把人格核心 + 关系压成一段紧凑中文约束；
+//  updateGuardInjection 用 setExtensionPrompt 把它注入每轮生成（IN_PROMPT）。
+//  措辞直接影响 RP 质量与是否触发内容拦截，面板里有实时预览可调整。
 // ==========================================================================
 function buildPersonaPrompt(p) {
     const c = p.core;
@@ -802,9 +821,19 @@ function buildPersonaPrompt(p) {
     if (Array.isArray(c.values) && c.values.length) out.push(`重视 / 追求：${c.values.join('、')}。`);
     if (Array.isArray(c.principles) && c.principles.length) out.push(`行为原则：${c.principles.join('；')}。`);
     if (Array.isArray(c.immutable) && c.immutable.length) out.push(`绝对不可漂移（除非出现足够强的剧情事件）：${c.immutable.join('；')}。`);
+    const rels = Array.isArray(p.relationships) ? p.relationships.filter(r => r && (r.name || r.type || r.note)) : [];
+    if (rels.length) out.push(`与不同人的关系：${rels.map(r => `${r.name || '某人'}${r.type ? '（' + r.type + '）' : ''}${r.note ? '：' + r.note : ''}`).join('；')}。`);
     out.push('无论剧情如何发展，保持以上人格一致，不要因剧情推进而逐渐变成另一个人。');
 
     return out.join('\n');
+}
+
+// 把人格锚定注入到每轮生成（IN_PROMPT：进入系统提示正文，模型生成时读取）。
+// 守卫开关关闭时清空注入；任何导致人格核心/关系变化的重绘都会刷新它。
+function updateGuardInjection() {
+    const on = getSettings().guardEnabled;
+    const text = on ? buildPersonaPrompt(getProfile()) : '';
+    setExtensionPrompt('coisini_guard', text ? '[Coisini 人格锚定]\n' + text : '', extension_prompt_types.IN_PROMPT, 0);
 }
 
 function renderApiConfig() {
@@ -908,6 +937,110 @@ function renderFingerprint(p) {
         + groups;
 }
 
+// ==========================================================================
+//  关系系统 —— 角色对不同人的不同行为
+// ==========================================================================
+let relEditIdx = null; // 正在编辑的关系下标；null = 新增
+
+function relEntries(p) {
+    if (!Array.isArray(p.relationships)) p.relationships = [];
+    return p.relationships;
+}
+
+function renderRelationships(p) {
+    relEditIdx = null; // 表单每次全新渲染，编辑态清零（relFill 会重新置位）
+    const entries = relEntries(p).filter(r => r && (r.name || r.type || r.note));
+
+    const form = `
+      <div class="co__api-grid">
+        <div class="co__field">
+          <span class="co__field-label">对方名字</span>
+          <input class="co__input co__rel-name" type="text" placeholder="如：小明" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="co__field">
+          <span class="co__field-label">关系类型</span>
+          <input class="co__input co__rel-type" type="text" placeholder="恋人 / 挚友 / 家人 / 宿敌…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="co__field co__field-span">
+          <span class="co__field-label">相处方式 / 说明</span>
+          <textarea class="co__input co__textarea co__rel-note" rows="2" placeholder="这个角色对 TA 的态度、相处方式、纠葛…" autocomplete="off" spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="co__api-actions">
+        <button type="button" class="co__btn co__btn-primary co__rel-save">添加关系</button>
+        <button type="button" class="co__btn co__rel-reset">清空输入</button>
+      </div>`;
+
+    const listBody = entries.length
+        ? entries.map((r, i) => `
+          <li class="co__rel-item">
+            <div class="co__rel-head">
+              <span class="co__rel-name">${esc(r.name || '（未命名）')}</span>
+              ${r.type ? `<span class="co__chip">${esc(r.type)}</span>` : ''}
+            </div>
+            ${r.note ? `<div class="co__rel-note">${esc(r.note)}</div>` : ''}
+            <div class="co__rel-actions">
+              <button type="button" class="co__btn co__rel-edit" data-idx="${i}">编辑</button>
+              <button type="button" class="co__btn co__rel-del" data-idx="${i}">删除</button>
+            </div>
+          </li>`).join('')
+        : inlineEmpty('暂无关系。在上方添加这个角色与不同人的关系，会一并注入到生成前守卫。');
+
+    return card('关系系统', '角色对「不同的人」行为不同 —— 恋人 / 朋友 / 家人 / 敌人 / 上司…', form)
+        + card('已有关系', '会注入到生成前守卫，让模型对不同人保持对应态度', `<ul class="co__rel-list">${listBody}</ul>`);
+}
+
+// 只重绘「关系系统」页（增删/保存后原地刷新）
+function renderRelationshipsPane() {
+    const panel = $('#st-coisini');
+    if (!panel.length) return;
+    panel.find('.co__pane[data-pane="relationships"]').html(renderRelationships(getProfile()));
+    updateGuardInjection();
+}
+
+function relSave() {
+    const panel = $('#st-coisini');
+    const name = String(panel.find('.co__rel-name').val() || '').trim();
+    const type = String(panel.find('.co__rel-type').val() || '').trim();
+    const note = String(panel.find('.co__rel-note').val() || '').trim();
+    if (!name && !type && !note) {
+        toastr.warning('请至少填一项（对方名字 / 类型 / 说明）。', undefined, { timeOut: 2500 });
+        return;
+    }
+    const p = getProfile();
+    const entries = relEntries(p);
+    const wasEdit = relEditIdx !== null;
+    if (wasEdit) {
+        if (relEditIdx >= 0 && relEditIdx < entries.length) entries[relEditIdx] = { name, type, note };
+        relEditIdx = null;
+    } else {
+        entries.push({ name, type, note });
+    }
+    saveProfile();
+    renderRelationshipsPane();
+    toastr.info(wasEdit ? '已更新关系。' : '已添加关系。', undefined, { timeOut: 2000 });
+}
+
+function relFill(idx) {
+    const r = relEntries(getProfile())[idx];
+    if (!r) return;
+    const panel = $('#st-coisini');
+    relEditIdx = idx;
+    panel.find('.co__rel-name').val(r.name || '');
+    panel.find('.co__rel-type').val(r.type || '');
+    panel.find('.co__rel-note').val(r.note || '');
+    panel.find('.co__rel-save').text('保存修改');
+}
+
+function relReset() {
+    const panel = $('#st-coisini');
+    relEditIdx = null;
+    panel.find('.co__rel-name').val('');
+    panel.find('.co__rel-type').val('');
+    panel.find('.co__rel-note').val('');
+    panel.find('.co__rel-save').text('添加关系');
+}
+
 function renderEvolution(p) {
     const changes = (p.evolution && p.evolution.changes) || [];
     if (!changes.length) {
@@ -969,7 +1102,15 @@ function renderMonitor(p) {
 
 function renderViolations(p) {
     const list = p.violations || [];
-    if (!list.length) return inlineEmpty('暂无异常记录。生成后审计发现的偏离会按 L0–L4 分级记录在这里。');
+    const toolbar = `<div class="co__toolbar">
+      <button type="button" class="co__btn co__btn-primary co__audit-last">${ICONS.alert}审计最近一楼</button>
+      <label class="co__toggle-row">
+        <input type="checkbox" class="co__auto-audit-toggle" ${getSettings().autoAudit ? 'checked' : ''}>
+        <span>每轮自动审计</span>
+      </label>
+      <span class="co__toolbar-hint">把最近一条 AI 回复与人格核心交给插件 API，判定偏离等级 L0–L4</span>
+    </div>`;
+    if (!list.length) return toolbar + inlineEmpty('暂无异常记录。点「审计最近一楼」或开启每轮自动审计，发现的偏离会按 L0–L4 分级记录在这里。');
     const items = list.slice().reverse().map(v => {
         const meta = LEVEL_META[v.level] || { label: 'L' + v.level, cls: '' };
         return `<li class="co__vio-item">
@@ -984,7 +1125,121 @@ function renderViolations(p) {
           </div>
         </li>`;
     }).join('');
-    return `<ul class="co__vio-list">${items}</ul>`;
+    return toolbar + `<ul class="co__vio-list">${items}</ul>`;
+}
+
+// ==========================================================================
+//  生成后审计 + 漂移检测 + 行为指纹采样（轻量，无 LLM 的部分）
+// ==========================================================================
+function lastAiMessage() {
+    if (!Array.isArray(chat)) return null;
+    for (let i = chat.length - 1; i >= 0; i--) {
+        const m = chat[i];
+        if (m && !m.is_user && m.mes && String(m.mes).trim()) return String(m.mes).trim();
+    }
+    return null;
+}
+
+function recomputeDrift(p) {
+    const vs = (p.violations || []).slice(-20);
+    if (!vs.length) {
+        p.drift = { index: 0, level: 'none', trends: [], updatedAt: Date.now() };
+        return;
+    }
+    let wsum = 0, tw = 0;
+    vs.forEach((v, i) => {
+        const w = (i + 1) / vs.length; // 越近权重越高
+        wsum += (Number(v.level) || 0) * w;
+        tw += w;
+    });
+    const avg = tw ? wsum / tw : 0; // 0–4
+    const index = Math.round(avg / 4 * 100);
+    const level = index >= 50 ? 'high' : index >= 25 ? 'mid' : index >= 10 ? 'low' : 'none';
+    const trends = [];
+    const recent = vs.slice(-5).map(v => Number(v.level) || 0);
+    if (recent.length >= 2 && recent[recent.length - 1] > recent[0]) trends.push('近期偏离等级上升');
+    if (vs.some(v => (Number(v.level) || 0) >= 3)) trends.push('出现 L3+ 严重冲突');
+    p.drift = { index, level, trends, updatedAt: Date.now() };
+}
+
+async function auditLastMessage() {
+    if (auditing) return;
+    if (!apiConfigured()) {
+        toastr.warning('请先在「人格核心 → 插件 API」配置并保存 url / 模型（不会回退聊天 API）。', undefined, { timeOut: 3500 });
+        return;
+    }
+    if (!currentCharacter()) {
+        toastr.warning('请先选择一个角色。', undefined, { timeOut: 2500 });
+        return;
+    }
+    const msg = lastAiMessage();
+    if (!msg) {
+        toastr.info('还没有 AI 回复可审计。', undefined, { timeOut: 2500 });
+        return;
+    }
+    const p = getProfile();
+    const persona = buildPersonaPrompt(p);
+    const systemPrompt = [
+        '你是角色一致性审计员。你判断角色最近一条回复是否偏离其人格核心。',
+        '只输出一个 JSON 对象，第一个字符必须是 {，不要任何解释、不要 Markdown 代码块。',
+    ].join('\n');
+    const prompt = [
+        '这是角色的「人格核心」：',
+        persona,
+        '',
+        '这是角色最近一条回复：',
+        '——',
+        msg,
+        '——',
+        '',
+        '请判断这条回复是否偏离人格核心，输出 JSON：',
+        '{"level": 0到4的整数, "reason": "一句话说明（正常就写正常）"}',
+        'level：0=正常，1=轻微偏离，2=明显偏离，3=严重人格冲突，4=灾难性 OOC。',
+    ].join('\n');
+
+    auditing = true;
+    const btn = $('.co__audit-last');
+    if (btn.length) btn.prop('disabled', true);
+    try {
+        const raw = await callApi({ prompt, systemPrompt, jsonMode: true });
+        const obj = parseJsonLoose(raw);
+        let level = 0, reason = '';
+        if (obj && typeof obj === 'object') {
+            const lv = Number(obj.level);
+            if (Number.isFinite(lv)) level = Math.max(0, Math.min(4, Math.round(lv)));
+            if (typeof obj.reason === 'string') reason = obj.reason.trim();
+        }
+        if (!reason) {
+            reason = (LEVEL_META[level] || { label: 'L' + level }).label;
+        }
+        p.violations.push({ t: Date.now(), level, reason, action: '', result: '' });
+        recomputeDrift(p);
+        saveProfile();
+        renderAll();
+        toastr.info('审计完成：' + (LEVEL_META[level] || { label: 'L' + level }).label + (reason ? ' · ' + reason : ''), undefined, { timeOut: 4000 });
+    } catch (e) {
+        toastr.error('审计失败：' + safeErrorText(e, getApiCfg().key), undefined, { timeOut: 8000 });
+    } finally {
+        auditing = false;
+        if (btn.length) btn.prop('disabled', false);
+    }
+}
+
+// 轻量行为指纹采样：每轮生成后从最近一条回复抽「说话长度 / 是否反问 / 是否解释」
+function sampleFingerprint() {
+    const msg = lastAiMessage();
+    if (!msg) return;
+    const p = getProfile();
+    const sp = p.behavior.speech;
+    const len = msg.length;
+    sp.length = len < 30 ? '简短' : len <= 150 ? '中等' : '长篇';
+    sp.rhetorical = /[？?]$/.test(msg) || /[吗呢]$/.test(msg);
+    sp.explain = /因为|所以|原因是|由于/.test(msg);
+    saveProfile();
+    const panel = $('#st-coisini');
+    if (panel.length && panel.is(':visible')) {
+        panel.find('.co__pane[data-pane="fingerprint"]').html(renderFingerprint(p));
+    }
 }
 
 // ==========================================================================
@@ -998,6 +1253,7 @@ function renderAll() {
     panel.find('.co__pane[data-pane="core"]').html(renderCore(p));
     panel.find('.co__pane[data-pane="state"]').html(renderState(p));
     panel.find('.co__pane[data-pane="fingerprint"]').html(renderFingerprint(p));
+    panel.find('.co__pane[data-pane="relationships"]').html(renderRelationships(p));
     panel.find('.co__pane[data-pane="evolution"]').html(renderEvolution(p));
     panel.find('.co__pane[data-pane="monitor"]').html(renderMonitor(p));
     panel.find('.co__pane[data-pane="violations"]').html(renderViolations(p));
@@ -1007,6 +1263,8 @@ function renderAll() {
     const vcount = (p.violations || []).length;
     const vtab = panel.find('.co__tab[data-pane="violations"] .co__tab-badge');
     vtab.text(vcount ? vcount : '').toggle(vcount > 0);
+
+    updateGuardInjection();
 }
 
 function switchTab(name) {
@@ -1156,6 +1414,52 @@ jQuery(() => {
             panel.find(`.co__chip-add[data-core-field="${field}"]`).trigger('click');
         }
     });
+    // 生成前守卫开关
+    panel.on('change', '.co__guard-toggle', function () {
+        getSettings().guardEnabled = $(this).is(':checked');
+        saveSettingsDebounced();
+        updateGuardInjection();
+        toastr.info(getSettings().guardEnabled ? '生成前守卫已开启。' : '生成前守卫已关闭。', undefined, { timeOut: 2000 });
+    });
+    // 每轮自动审计开关
+    panel.on('change', '.co__auto-audit-toggle', function () {
+        getSettings().autoAudit = $(this).is(':checked');
+        saveSettingsDebounced();
+        toastr.info(getSettings().autoAudit ? '每轮自动审计已开启（慢模型慎开）。' : '每轮自动审计已关闭。', undefined, { timeOut: 2500 });
+    });
+    // 手动审计最近一楼
+    panel.on('click', '.co__audit-last', function () {
+        auditLastMessage();
+    });
+    // 关系系统
+    panel.on('click', '.co__rel-save', function () { relSave(); });
+    panel.on('click', '.co__rel-reset', function () { relReset(); });
+    panel.on('click', '.co__rel-edit', function () { relFill(Number($(this).data('idx'))); });
+    panel.on('click', '.co__rel-del', function () {
+        const idx = Number($(this).data('idx'));
+        const p = getProfile();
+        const entries = relEntries(p);
+        if (Number.isInteger(idx) && idx >= 0 && idx < entries.length) {
+            entries.splice(idx, 1);
+            saveProfile();
+        }
+        relEditIdx = null;
+        renderRelationshipsPane();
+    });
+
+    // 运行期钩子：切聊天刷新守卫；每轮生成后轻量采样 + 可选自动审计
+    eventSource.on(event_types.CHAT_CHANGED, () => {
+        setTimeout(() => { updateGuardInjection(); }, 150);
+    });
+    eventSource.on(event_types.GENERATION_ENDED, () => {
+        setTimeout(() => {
+            sampleFingerprint();
+            if (getSettings().autoAudit) auditLastMessage();
+        }, 300);
+    });
+
+    // 初始注入（尚未打开面板时守卫也生效）
+    updateGuardInjection();
 });
 
 // ST 自动更新扩展后会调用 manifest.hooks.update 指向的这个函数，

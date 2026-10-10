@@ -360,6 +360,58 @@
     color: var(--co-ink-2);
 }
 
+/* 开关行（生成前守卫 / 每轮自动审计） */
+#st-coisini .co__toggle-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--co-ink-2);
+    cursor: pointer;
+    user-select: none;
+}
+#st-coisini .co__toggle-row input { cursor: pointer; }
+
+/* 关系系统：列表 */
+#st-coisini .co__rel-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+#st-coisini .co__rel-item {
+    padding: 10px 12px;
+    background: var(--co-surface-2);
+    border: 1px solid var(--co-border);
+    border-radius: 8px;
+}
+#st-coisini .co__rel-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+#st-coisini .co__rel-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--co-ink);
+}
+#st-coisini .co__rel-note {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--co-ink-2);
+    overflow-wrap: anywhere;
+}
+#st-coisini .co__rel-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
 /* ============================ 内联空态 ============================ */
 #st-coisini .co__inline-empty {
     padding: 16px 14px;
